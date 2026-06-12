@@ -110,7 +110,7 @@
                   </label>
                   <input [id]="'bv-' + ($index + 1)" class="bc-var-input" type="text"
                          [placeholder]="varLabel"
-                         [value]="templateVars()[$index + 1 + ''] ?? ''"
+                         [value]="templateVars()[$index + 1 + ''] || ''"
                          (input)="setVar(($index + 1) + '', $any($event.target).value)" />
                 </div>
               }

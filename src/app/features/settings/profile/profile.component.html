@@ -33,7 +33,7 @@
       </div>
       <div class="tenant-plan">
         <span class="tenant-label">Plan</span>
-        <span class="plan-badge">{{ PLAN_LABEL[info.plan] ?? info.plan }}</span>
+        <span class="plan-badge">{{ PLAN_LABEL[info.plan] || info.plan }}</span>
       </div>
       <div class="tenant-country">
         <span class="tenant-label">País</span>

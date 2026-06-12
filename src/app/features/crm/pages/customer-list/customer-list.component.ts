@@ -1,5 +1,4 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CrmService } from '../../services/crm.service';
 import {
@@ -13,7 +12,7 @@ import {
 @Component({
   selector: 'app-customer-list',
   standalone: true,
-  imports: [DecimalPipe, FormsModule],
+  imports: [FormsModule],
   templateUrl: './customer-list.component.html',
   styleUrl:    './customer-list.component.scss',
 })

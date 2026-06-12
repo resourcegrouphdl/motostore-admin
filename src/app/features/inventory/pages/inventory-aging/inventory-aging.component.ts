@@ -1,6 +1,4 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe, DatePipe } from '@angular/common';
-
 import { MotoService } from '../../services/moto.service';
 import {
   Moto, MotoStatus, STATUS_LABEL, STATUS_COLOR,
@@ -46,7 +44,7 @@ function daysInInventory(moto: Moto): number {
 @Component({
   selector: 'app-inventory-aging',
   standalone: true,
-  imports: [DecimalPipe, DatePipe],
+  imports: [],
   templateUrl: './inventory-aging.component.html',
   styleUrl: './inventory-aging.component.scss',
 })

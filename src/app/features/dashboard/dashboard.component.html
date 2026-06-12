@@ -125,109 +125,103 @@
       }
     </section>
 
-    <!-- Accesos rápidos -->
-    <section class="actions-card m-card">
-      <h2 class="section-title">Módulos</h2>
-      <nav class="action-list" aria-label="Módulos del sistema">
+    <!-- Para hoy -->
+    <section class="today-card m-card">
+      <h2 class="section-title">Para hoy</h2>
 
-        @if (loading()) {
-          @for (s of [1,2,3,4,5]; track s) {
-            <div class="action-item action-item--skel">
-              <span class="skel skel--icon"></span>
-              <span class="action-text">
+      @if (loading()) {
+        <div class="today-list">
+          @for (s of [1,2,3]; track s) {
+            <div class="today-item">
+              <span class="skel" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
+              <span class="today-text">
                 <span class="skel skel--label-sm"></span>
                 <span class="skel skel--sub" style="margin-top:4px"></span>
               </span>
             </div>
           }
-        } @else {
-          @for (action of quickActions(); track action.route; let i = $index) {
-            <a class="action-item" [routerLink]="action.route" [style.--idx]="animIdx(i)">
-              <span class="action-icon" [attr.data-color]="action.color" aria-hidden="true">
+        </div>
+      } @else {
+        @let pendientes = creditosPendientes().length;
+        @let otListas   = otListaCount();
+        @let pedidos    = storeOrdersPending();
+        @let mora       = overdueAccounts().length;
+        @let hayPend    = pendientes > 0 || otListas > 0 || pedidos > 0 || mora > 0;
 
-                @if (action.iconKey === 'moto') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/>
-                    <path d="M8 17.5h7M2 12l2-7h10l2 4h3l2 3-3 1"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'sale') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'crm') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'credit') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
-                    <line x1="1" y1="10" x2="23" y2="10"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'collection') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="4" width="20" height="18" rx="2"/>
-                    <path d="M16 2v4M8 2v4M2 10h20"/>
-                    <path d="M8 15h2m4 0h2M8 19h2"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'analytics') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="20" x2="18" y2="10"/>
-                    <line x1="12" y1="20" x2="12" y2="4"/>
-                    <line x1="6"  y1="20" x2="6"  y2="14"/>
-                    <line x1="2"  y1="20" x2="22" y2="20"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'whatsapp') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'billing') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
-                    <line x1="16" y1="17" x2="8" y2="17"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'workshop') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                  </svg>
-                }
-                @if (action.iconKey === 'store-orders') {
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
-                    <line x1="3" y1="6" x2="21" y2="6"/>
-                    <path d="M16 10a4 4 0 0 1-8 0"/>
-                  </svg>
-                }
+        <div class="today-list">
+          @if (!hayPend) {
+            <div class="today-ok">
+              <div class="today-ok-icon" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <span class="today-ok-text">Operación al día, sin pendientes urgentes</span>
+            </div>
+          }
 
+          @if (mora > 0) {
+            <a class="today-item" routerLink="/collection" [style.--idx]="0">
+              <span class="today-dot" data-type="danger"></span>
+              <span class="today-text">
+                <span class="today-label">Cuentas en mora</span>
+                <span class="today-sub">Requieren seguimiento hoy</span>
               </span>
-              <span class="action-text">
-                <span class="action-name">{{ action.label }}</span>
-                <span class="action-desc"
-                      [class.action-desc--alert]="action.iconKey === 'collection' && overdueAccounts().length > 0"
-                      [class.action-desc--warn]="(action.iconKey === 'credit'       && creditosPendientes().length > 0) ||
-                                                 (action.iconKey === 'workshop'     && otListaCount() > 0)              ||
-                                                 (action.iconKey === 'store-orders' && storeOrdersPending() > 0)">
-                  {{ action.desc }}
-                </span>
-              </span>
-              <svg class="action-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
+              <span class="today-count" data-type="danger">{{ mora }}</span>
+              <svg class="today-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <polyline points="9 18 15 12 9 6"/>
               </svg>
             </a>
           }
-        }
 
-      </nav>
+          @if (otListas > 0) {
+            <a class="today-item" routerLink="/workshop" [style.--idx]="1">
+              <span class="today-dot" data-type="warning"></span>
+              <span class="today-text">
+                <span class="today-label">OT{{ otListas > 1 ? 's' : '' }} lista{{ otListas > 1 ? 's' : '' }} para entrega</span>
+                <span class="today-sub">Cliente esperando confirmación</span>
+              </span>
+              <span class="today-count" data-type="warning">{{ otListas }}</span>
+              <svg class="today-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </a>
+          }
+
+          @if (pedidos > 0) {
+            <a class="today-item" routerLink="/store-orders" [style.--idx]="2">
+              <span class="today-dot" data-type="info"></span>
+              <span class="today-text">
+                <span class="today-label">Pedido{{ pedidos > 1 ? 's' : '' }} web por confirmar</span>
+                <span class="today-sub">Pendientes de preparación</span>
+              </span>
+              <span class="today-count" data-type="info">{{ pedidos }}</span>
+              <svg class="today-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </a>
+          }
+
+          @if (pendientes > 0) {
+            <a class="today-item" routerLink="/credit" [style.--idx]="3">
+              <span class="today-dot" data-type="warning"></span>
+              <span class="today-text">
+                <span class="today-label">Crédito{{ pendientes > 1 ? 's' : '' }} pendiente{{ pendientes > 1 ? 's' : '' }}</span>
+                <span class="today-sub">En revisión, sin respuesta</span>
+              </span>
+              <span class="today-count" data-type="warning">{{ pendientes }}</span>
+              <svg class="today-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </a>
+          }
+        </div>
+      }
     </section>
 
   </div>

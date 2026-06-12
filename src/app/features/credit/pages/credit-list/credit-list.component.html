@@ -119,7 +119,7 @@
                      [style.background]="scoreColor(app.score)"></div>
               </div>
               <span class="qual-label" [attr.data-qual]="app.qualification">
-                {{ QUAL_LABEL[app.qualification] ?? app.qualification }}
+                {{ QUAL_LABEL[app.qualification] || app.qualification }}
               </span>
             </div>
           </td>
@@ -191,7 +191,7 @@
       </div>
       <span class="score-strip-num" [style.color]="scoreColor(app.score)">{{ app.score }}/100</span>
       <span class="qual-pill" [attr.data-qual]="app.qualification">
-        {{ QUAL_LABEL[app.qualification] ?? app.qualification }}
+        {{ QUAL_LABEL[app.qualification] || app.qualification }}
       </span>
     </div>
 

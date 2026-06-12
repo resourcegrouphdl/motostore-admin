@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DatePipe, NgClass } from '@angular/common';
+import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { StaffService } from '../../staff/services/staff.service';
@@ -10,7 +10,7 @@ import {
 @Component({
   selector: 'app-users-roles',
   standalone: true,
-  imports: [DatePipe, NgClass, FormsModule],
+  imports: [DatePipe, FormsModule],
   templateUrl: './users-roles.component.html',
   styleUrl:    './users-roles.component.scss',
 })

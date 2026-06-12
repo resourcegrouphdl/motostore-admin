@@ -2,7 +2,7 @@ import {
   Component, computed, effect, ElementRef, inject, Input, OnDestroy, OnInit,
   output, signal, ViewChild,
 } from '@angular/core';
-import { DatePipe, DecimalPipe, NgClass } from '@angular/common';
+import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
 import { SaleService } from '../../services/sale.service';
@@ -16,7 +16,7 @@ type Step = 1 | 2 | 3;
 @Component({
   selector: 'app-delivery-form',
   standalone: true,
-  imports: [DatePipe, DecimalPipe, NgClass, FormsModule],
+  imports: [DatePipe, DecimalPipe, FormsModule],
   templateUrl: './delivery-form.component.html',
   styleUrl:    './delivery-form.component.scss',
 })

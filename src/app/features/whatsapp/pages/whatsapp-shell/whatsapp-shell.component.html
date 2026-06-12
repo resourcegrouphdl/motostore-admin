@@ -262,7 +262,7 @@
                     <label class="tp-var-label" [for]="'tv-' + ($index + 1)">{{ varLabel }}</label>
                     <input [id]="'tv-' + ($index + 1)" class="tp-var-input" type="text"
                            [placeholder]="varLabel"
-                           [value]="templateVars()[$index + 1 + ''] ?? ''"
+                           [value]="templateVars()[$index + 1 + ''] || ''"
                            (input)="setTemplateVar(($index + 1) + '', $any($event.target).value)" />
                   </div>
                 }

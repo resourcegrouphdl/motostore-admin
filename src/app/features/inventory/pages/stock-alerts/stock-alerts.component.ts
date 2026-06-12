@@ -1,5 +1,4 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DecimalPipe } from '@angular/common';
 import { forkJoin, of } from 'rxjs';
 import { catchError, switchMap } from 'rxjs/operators';
 
@@ -19,7 +18,7 @@ interface AlertItem {
 @Component({
   selector: 'app-stock-alerts',
   standalone: true,
-  imports: [DecimalPipe],
+  imports: [],
   templateUrl: './stock-alerts.component.html',
   styleUrl: './stock-alerts.component.scss',
 })

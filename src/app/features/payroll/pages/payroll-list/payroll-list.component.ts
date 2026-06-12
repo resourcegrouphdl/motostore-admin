@@ -1,5 +1,5 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { DatePipe, DecimalPipe } from '@angular/common';
+import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PayrollService } from '../../services/payroll.service';
 import {
@@ -14,7 +14,7 @@ type PayrollTab = 'employees' | 'payroll' | 'payslips' | 'plame';
 @Component({
   selector:    'app-payroll-list',
   standalone:  true,
-  imports:     [DatePipe, DecimalPipe, FormsModule],
+  imports:     [DecimalPipe, FormsModule],
   templateUrl: './payroll-list.component.html',
   styleUrl:    './payroll-list.component.scss',
 })

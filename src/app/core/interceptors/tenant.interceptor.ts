@@ -11,9 +11,11 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  const slug = environment.production
-    ? extractSubdomain(window.location.hostname)
-    : environment.tenantSlug;
+  // env.tenantSlug (hardcoded per-tenant build) beats subdomain extraction.
+  // On Firebase Hosting the subdomain is the site ID (e.g. "motostore-admin"),
+  // not the tenant slug — so env var must win when set.
+  const slug = environment.tenantSlug
+    || (environment.production ? extractSubdomain(window.location.hostname) : '');
 
   if (!slug) return next(req);
 

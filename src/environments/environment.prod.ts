@@ -5,7 +5,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://motostore-api-749765863620.southamerica-east1.run.app',
-  tenantSlug: '',                            // En prod se deriva del subdominio
+  tenantSlug: 'moto-ya-digital',
   useEmulators: false,
   emulators: {
     authPort: 9099,
@@ -18,7 +18,7 @@ export const environment = {
     projectId: 'mvmotors-alcontado-front',
     storageBucket: 'mvmotors-alcontado-front.firebasestorage.app',
     messagingSenderId: '403093531044',
-    appId: '1:403093531044:web:e35a0159db18468766b931',
-    measurementId: 'G-97GY9088KH'
+    appId: '1:403093531044:web:e8a0b68d1af25ccb66b931',
+    measurementId: 'G-HJQX6BVPED'
   }
 };

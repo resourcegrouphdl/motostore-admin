@@ -320,7 +320,7 @@
                   <td>
                     <div class="emp-cell">
                       <div class="emp-avatar" [attr.data-status]="emp.status" aria-hidden="true">
-                        {{ emp.firstName[0] ?? '' }}{{ emp.lastName[0] ?? '' }}
+                        {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
                       </div>
                       <div class="emp-info">
                         <span class="emp-name">{{ emp.fullName }}</span>
@@ -526,7 +526,7 @@
                       [class.emp-pick-btn--active]="selectedPayslipEmpId() === emp.id"
                       (click)="selectPayslipEmployee(emp.id)">
                 <div class="emp-avatar emp-avatar--sm" aria-hidden="true">
-                  {{ emp.firstName[0] ?? '' }}{{ emp.lastName[0] ?? '' }}
+                  {{ emp.firstName.charAt(0) }}{{ emp.lastName.charAt(0) }}
                 </div>
                 <div class="emp-info">
                   <span class="emp-name">{{ emp.fullName }}</span>

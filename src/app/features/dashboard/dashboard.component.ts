@@ -38,14 +38,6 @@ interface StatusRow {
   pct:    number;
 }
 
-interface QuickAction {
-  label:   string;
-  desc:    string;
-  route:   string;
-  iconKey: string;
-  color:   'accent' | 'success' | 'warning' | 'info' | 'credit' | 'billing' | 'collection' | 'analytics' | 'whatsapp' | 'workshop' | 'store-orders';
-}
-
 interface DashAlert {
   type:    'warn' | 'danger' | 'info';
   message: string;
@@ -276,86 +268,6 @@ export class DashboardComponent implements OnInit {
       .filter(m => m.status === 'IN_WAREHOUSE' || m.status === 'ON_DISPLAY')
       .reduce((sum, m) => sum + (m.listPrice ?? 0), 0)
   );
-
-  // ── Quick actions ─────────────────────────────────────────────────────
-  quickActions = computed<QuickAction[]>(() => {
-    const analytics  = this.salesAnalytics();
-    const vtaMes     = analytics ? Number(analytics.kpis[0]?.value ?? 0) : 0;
-    const pendientes = this.creditosPendientes().length;
-    const activos    = this.creditosActivos().length;
-    const overdue    = this.overdueAccounts().length;
-    const otActivas  = this.otActivasCount();
-    const pedidos    = this.storeOrdersPending();
-
-    return [
-      {
-        label:   'Inventario',
-        desc:    `${this.totalMotos()} unidades registradas`,
-        route:   '/inventory/motos',
-        iconKey: 'moto',
-        color:   'accent',
-      },
-      {
-        label:   'Ventas',
-        desc:    vtaMes > 0
-                   ? `${vtaMes} venta${vtaMes > 1 ? 's' : ''} este mes`
-                   : 'Sin ventas este mes',
-        route:   '/sales',
-        iconKey: 'sale',
-        color:   'success',
-      },
-      {
-        label:   'Taller',
-        desc:    otActivas > 0
-                   ? `${otActivas} OT${otActivas > 1 ? 's' : ''} activa${otActivas > 1 ? 's' : ''}`
-                   : 'Sin OTs activas',
-        route:   '/workshop',
-        iconKey: 'workshop',
-        color:   'workshop',
-      },
-      {
-        label:   'Pedidos Web',
-        desc:    pedidos > 0
-                   ? `${pedidos} pendiente${pedidos > 1 ? 's' : ''} de confirmar`
-                   : 'Sin pedidos pendientes',
-        route:   '/store-orders',
-        iconKey: 'store-orders',
-        color:   'store-orders',
-      },
-      {
-        label:   'CRM',
-        desc:    'Clientes y pipeline',
-        route:   '/crm',
-        iconKey: 'crm',
-        color:   'success',
-      },
-      {
-        label:   'Crédito',
-        desc:    pendientes > 0
-                   ? `${pendientes} pendiente${pendientes > 1 ? 's' : ''} de revisión`
-                   : `${activos} activo${activos > 1 ? 's' : ''}`,
-        route:   '/credit',
-        iconKey: 'credit',
-        color:   'credit',
-      },
-      {
-        label:   'Cobranza',
-        desc:    overdue > 0
-                   ? `${overdue} cuenta${overdue > 1 ? 's' : ''} vencida${overdue > 1 ? 's' : ''}`
-                   : 'Al día',
-        route:   '/collection',
-        iconKey: 'collection',
-        color:   'collection',
-      },
-      {
-        label:   'Analytics',
-        desc:    'KPIs y tendencias',
-        route:   '/analytics',
-        iconKey: 'analytics',
-        color:   'analytics',
-      },
-    ];
-  });
 
   today = new Date().toLocaleDateString('es-PE', {
     weekday: 'long', day: 'numeric', month: 'long',
