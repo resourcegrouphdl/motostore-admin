@@ -1,0 +1,248 @@
+<div class="bc-page">
+
+  <!-- ── Page header ─────────────────────────────────────────── -->
+  <div class="bc-page-head">
+    <a class="bc-back-link" routerLink="/whatsapp">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Conversaciones
+    </a>
+    <h1 class="bc-title">Envío masivo</h1>
+    <p class="bc-desc">Envía un template de WhatsApp a un segmento de clientes.</p>
+  </div>
+
+  <!-- ── Step indicator ──────────────────────────────────────── -->
+  @if (step() !== 'done') {
+    <div class="bc-steps" aria-label="Pasos del broadcast">
+      @for (s of [
+        { key: 'config',  label: '1. Configurar'  },
+        { key: 'preview', label: '2. Confirmar'   }
+      ]; track s.key) {
+        <div class="bc-step"
+             [class.bc-step--active]="step() === s.key"
+             [class.bc-step--done]="s.key === 'config' && step() === 'preview'">
+          {{ s.label }}
+        </div>
+        @if (!$last) { <div class="bc-step-sep" aria-hidden="true"></div> }
+      }
+    </div>
+  }
+
+  <!-- ── STEP 1: Config ───────────────────────────────────────── -->
+  @if (step() === 'config') {
+    <div class="bc-card">
+
+      <!-- Segment selector -->
+      <section class="bc-section">
+        <h2 class="bc-section-title">Segmento de destinatarios</h2>
+        <div class="segment-list" role="radiogroup" aria-label="Seleccionar segmento">
+          @for (seg of BROADCAST_SEGMENTS; track seg.value; let i = $index) {
+            <label class="segment-item"
+                   [style.--idx]="i"
+                   [class.segment-item--selected]="segment() === seg.value">
+              <input type="radio" name="segment" [value]="seg.value"
+                     [checked]="segment() === seg.value"
+                     (change)="onSegmentChange(seg.value)"
+                     class="sr-only" />
+              <div class="segment-check" aria-hidden="true">
+                @if (segment() === seg.value) {
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                }
+              </div>
+              <div class="segment-info">
+                <span class="segment-label">{{ seg.label }}</span>
+                <span class="segment-desc">{{ seg.description }}</span>
+              </div>
+              <!-- Count badge per segment -->
+              <div class="segment-count" aria-label="Destinatarios">
+                @if (segmentCounts()[seg.value] !== undefined) {
+                  <span class="segment-count__num">{{ segmentCounts()[seg.value] }}</span>
+                  <span class="segment-count__lbl">contactos</span>
+                } @else if (segment() === seg.value && segmentCountLoading()) {
+                  <span class="segment-count__loading"></span>
+                }
+              </div>
+            </label>
+          }
+        </div>
+      </section>
+
+      <!-- Template selector -->
+      <section class="bc-section">
+        <h2 class="bc-section-title">Template de mensaje</h2>
+        <div class="template-list">
+          @for (tmpl of WA_TEMPLATES; track tmpl.name; let i = $index) {
+            <button class="tmpl-card"
+                    type="button"
+                    [style.--idx]="i"
+                    [class.tmpl-card--selected]="templateName() === tmpl.name"
+                    (click)="selectTemplate(tmpl.name)">
+              <div class="tmpl-card__header">
+                <span class="tmpl-card__name">{{ tmpl.displayName }}</span>
+                @if (templateName() === tmpl.name) {
+                  <span class="tmpl-card__sel-badge">Seleccionado</span>
+                }
+              </div>
+              <p class="tmpl-card__body">{{ tmpl.body }}</p>
+            </button>
+          }
+        </div>
+      </section>
+
+      <!-- Variable fields -->
+      @if (selectedTemplate().variables.length > 0) {
+        <section class="bc-section">
+          <h2 class="bc-section-title">Personalizar variables</h2>
+          <p class="bc-vars-hint">
+            El nombre del destinatario se sustituye automáticamente. Completa los demás campos.
+          </p>
+          <div class="bc-vars">
+            @for (varLabel of selectedTemplate().variables; track $index) {
+              @if ($index > 0) {
+                <div class="bc-var-field">
+                  <label class="bc-var-label" [for]="'bv-' + ($index + 1)">
+                    {{ varLabel }}
+                  </label>
+                  <input [id]="'bv-' + ($index + 1)" class="bc-var-input" type="text"
+                         [placeholder]="varLabel"
+                         [value]="templateVars()[$index + 1 + ''] ?? ''"
+                         (input)="setVar(($index + 1) + '', $any($event.target).value)" />
+                </div>
+              }
+            }
+          </div>
+        </section>
+      }
+
+      <div class="bc-footer">
+        <button class="btn-next" type="button"
+                [disabled]="!allVarsFilled()"
+                (click)="goToPreview()">
+          Revisar y confirmar
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── STEP 2: Preview + Confirm ───────────────────────────── -->
+  @if (step() === 'preview') {
+    <div class="bc-card bc-card--preview">
+
+      <section class="bc-section">
+        <h2 class="bc-section-title">Resumen del envío</h2>
+
+        <div class="preview-meta">
+          <div class="preview-row">
+            <span class="preview-key">Segmento</span>
+            <span class="preview-val">{{ selectedSegment().label }}</span>
+          </div>
+          <div class="preview-row">
+            <span class="preview-key">Template</span>
+            <span class="preview-val">{{ selectedTemplate().displayName }}</span>
+          </div>
+          @if (currentCount() !== null) {
+            <div class="preview-row">
+              <span class="preview-key">Destinatarios</span>
+              <span class="preview-val preview-val--count">{{ currentCount() }} contactos</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <section class="bc-section">
+        <h2 class="bc-section-title">Vista previa del mensaje</h2>
+        <div class="msg-preview">
+          <div class="msg-preview__bubble">
+            <p class="msg-preview__text">{{ previewText() }}</p>
+            <span class="msg-preview__time">Ahora · Enviando</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Irreversibility warning banner -->
+      @if (currentCount() !== null && currentCount()! > 0) {
+        <div class="bc-warning" role="alert">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Este mensaje se enviará a <strong>{{ currentCount() }} contactos</strong>.
+          Esta acción no se puede deshacer.
+        </div>
+      }
+
+      @if (sendError()) {
+        <div class="bc-error" role="alert">{{ sendError() }}</div>
+      }
+
+      <div class="bc-footer bc-footer--gap">
+        <button class="btn-back" type="button" [disabled]="sending()" (click)="backToConfig()">
+          Volver
+        </button>
+        <button class="btn-send-bc" type="button" [disabled]="sending()" (click)="sendBroadcast()">
+          @if (sending()) {
+            <span class="spinner-sm"></span>
+            Enviando…
+          } @else {
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            Enviar a {{ selectedSegment().label }}
+          }
+        </button>
+      </div>
+
+    </div>
+  }
+
+  <!-- ── STEP 3: Done ─────────────────────────────────────────── -->
+  @if (step() === 'done' && result(); as res) {
+    <div class="bc-card bc-done">
+      <div class="bc-done__icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <h2 class="bc-done__title">Broadcast enviado</h2>
+      <p class="bc-done__sub">Los mensajes están en procesamiento en WhatsApp Business.</p>
+
+      <div class="bc-done__stats">
+        <div class="done-stat">
+          <span class="done-stat__num done-stat__num--ok">{{ animSent() }}</span>
+          <span class="done-stat__label">Enviados</span>
+        </div>
+        <div class="done-stat">
+          <span class="done-stat__num">{{ animTotal() }}</span>
+          <span class="done-stat__label">Total</span>
+        </div>
+        @if (res.failed > 0) {
+          <div class="done-stat">
+            <span class="done-stat__num done-stat__num--danger">{{ animFailed() }}</span>
+            <span class="done-stat__label">Fallidos</span>
+          </div>
+        }
+      </div>
+
+      <div class="bc-done__actions">
+        <a class="btn-back" routerLink="/whatsapp">Ver conversaciones</a>
+        <button class="btn-next" type="button" (click)="newBroadcast()">Nuevo broadcast</button>
+      </div>
+    </div>
+  }
+
+</div>

@@ -1,0 +1,505 @@
+<!-- ── Toolbar ─────────────────────────────────────────────── -->
+<div class="export-toolbar">
+  <button class="btn-export" (click)="exportCsv()" [disabled]="exporting() || loading()">
+    @if (exporting()) {
+      <span class="export-spinner"></span>
+      Exportando…
+    } @else {
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Exportar CSV
+    }
+  </button>
+</div>
+
+<!-- ── KPI strip ──────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--danger">S/ {{ totalOverdueSoles() | number:'1.0-0' }}</span>
+    <span class="kpi-tag">mora total</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--warn">{{ accountsCount() }}</span>
+    <span class="kpi-tag">cuentas vencidas</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--ok">S/ {{ recoveredThisMonth() | number:'1.0-0' }}</span>
+    <span class="kpi-tag">recuperado este mes</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <div class="kpi-rate">
+      <div class="kpi-rate-bar">
+        <div class="kpi-rate-fill" [style.width.%]="recoveryRate()"
+             [attr.data-rate]="recoveryRate() >= 70 ? 'ok' : recoveryRate() >= 40 ? 'warn' : 'danger'"></div>
+      </div>
+      <span class="kpi-num" [class]="recoveryRateClass()">{{ recoveryRate() | number:'1.0-0' }}%</span>
+    </div>
+    <span class="kpi-tag">% recuperación</span>
+  </div>
+</div>
+
+<!-- ── Toolbar ────────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="filter-chips" role="group" aria-label="Filtrar por antigüedad">
+    @for (f of AGING_FILTERS; track f.value) {
+      <button class="chip" type="button"
+              [class.chip--active]="filterBucket() === f.value"
+              (click)="filterBucket.set(f.value)">
+        {{ f.label }}
+        @if (f.value && countByBucket().get(f.value)) {
+          <span class="chip-count">{{ countByBucket().get(f.value) }}</span>
+        }
+      </button>
+    }
+  </div>
+  <input class="search-input" type="search" placeholder="Buscar nombre, DNI o teléfono…"
+         [value]="query()" (input)="query.set($any($event.target).value)"
+         aria-label="Buscar cuenta en mora" />
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="overdue-table">
+    <thead>
+      <tr>
+        <th scope="col">Cliente</th>
+        <th scope="col">Moto / Crédito</th>
+        <th scope="col">Antigüedad</th>
+        <th scope="col" class="col-right">Cuotas venc.</th>
+        <th scope="col" class="col-right">Total mora</th>
+        <th scope="col">Asesor</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+
+      @if (loading()) {
+        @for (s of [1,2,3,4,5]; track s) {
+          <tr class="skel-row">
+            <td><span class="skel skel--name"></span><span class="skel skel--sub"></span></td>
+            <td><span class="skel skel--name"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td class="col-right"><span class="skel skel--num"></span></td>
+            <td class="col-right"><span class="skel skel--amount"></span></td>
+            <td><span class="skel skel--sub"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && filtered().length === 0 && !error()) {
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              <span>Sin cuentas en mora con los filtros actuales.</span>
+            </div>
+          </td>
+        </tr>
+      }
+
+      @for (acc of filtered(); track acc.creditApplicationId; let i = $index) {
+        <tr class="overdue-row"
+            [style.--idx]="animIdx(i)"
+            [class.overdue-row--selected]="selected()?.creditApplicationId === acc.creditApplicationId"
+            (click)="openDetail(acc)" role="button" tabindex="0"
+            (keydown.enter)="openDetail(acc)">
+
+          <!-- Cliente -->
+          <td class="cell-client">
+            <span class="client-name">{{ acc.fullName }}</span>
+            <span class="client-sub">DNI {{ acc.dni }}
+              @if (acc.phone) { · {{ acc.phone }} }
+            </span>
+          </td>
+
+          <!-- Moto / Crédito -->
+          <td class="cell-moto">
+            <span class="moto-desc">{{ acc.motoDescription ?? '—' }}</span>
+            <span class="credit-id">ID {{ acc.creditApplicationId.slice(0, 8) }}…</span>
+          </td>
+
+          <!-- Antigüedad -->
+          <td>
+            <span class="aging-badge" [attr.data-bucket]="bucket(acc.daysOverdue)"
+                  [attr.aria-label]="acc.daysOverdue + ' días, rango ' + agingLabel(acc.daysOverdue)">
+              {{ acc.daysOverdue }}d · {{ agingLabel(acc.daysOverdue) }}
+            </span>
+          </td>
+
+          <!-- Cuotas vencidas -->
+          <td class="col-right">
+            <span class="overdue-count" [class.overdue-count--danger]="acc.overdueInstallments > 2">
+              {{ acc.overdueInstallments }}
+            </span>
+          </td>
+
+          <!-- Total mora -->
+          <td class="col-right">
+            <span class="mora-amount">S/ {{ acc.totalOverdueSoles | number:'1.0-0' }}</span>
+          </td>
+
+          <!-- Asesor -->
+          <td>
+            <span class="advisor-label">{{ acc.assignedAdvisor ?? '—' }}</span>
+          </td>
+
+          <!-- Chevron -->
+          <td class="cell-chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </td>
+
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Detail panel backdrop ─────────────────────────────── -->
+@if (selected()) {
+  <div class="panel-backdrop" (click)="closeDetail()" aria-hidden="true"></div>
+}
+
+<!-- ── Detail panel ──────────────────────────────────────── -->
+<aside class="detail-panel" [class.detail-panel--open]="!!selected()"
+       role="complementary" aria-label="Detalle de cobranza">
+  @if (selected(); as acc) {
+
+    <!-- Panel header -->
+    <div class="panel-header">
+      <div class="panel-header-main">
+        <div class="panel-name">{{ acc.fullName }}</div>
+        <div class="panel-sub">DNI {{ acc.dni }}
+          @if (acc.phone) { · {{ acc.phone }} }
+        </div>
+      </div>
+      <span class="aging-badge aging-badge--lg" [attr.data-bucket]="bucket(acc.daysOverdue)">
+        {{ acc.daysOverdue }} días vencido
+      </span>
+      <button class="panel-close" type="button" (click)="closeDetail()" aria-label="Cerrar panel">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Mora strip -->
+    <div class="mora-strip">
+      <div class="mora-strip-item">
+        <span class="mora-strip-label">Total en mora</span>
+        <span class="mora-strip-val mora-strip-val--danger">
+          S/ {{ acc.totalOverdueSoles | number:'1.2-2' }}
+        </span>
+      </div>
+      <div class="mora-strip-sep"></div>
+      <div class="mora-strip-item">
+        <span class="mora-strip-label">Cuotas vencidas</span>
+        <span class="mora-strip-val">{{ acc.overdueInstallments }}</span>
+      </div>
+      @if (acc.nextPaymentDate) {
+        <div class="mora-strip-sep"></div>
+        <div class="mora-strip-item">
+          <span class="mora-strip-label">Próxima cuota</span>
+          <span class="mora-strip-val">
+            {{ acc.nextPaymentDate | date:'dd/MM/yy' }}
+            @if (acc.nextPaymentAmount) { · S/ {{ acc.nextPaymentAmount | number:'1.0-0' }} }
+          </span>
+        </div>
+      }
+    </div>
+
+    <!-- Recordatorio WhatsApp -->
+    <div class="reminder-bar">
+      @if (isReminderSent(acc.creditApplicationId)) {
+        <div class="reminder-sent-badge">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Recordatorio enviado
+        </div>
+        <button class="btn-wa-reminder btn-wa-reminder--resend"
+                [disabled]="reminderLoading()"
+                (click)="sendReminder(acc)">
+          Reenviar
+        </button>
+      } @else {
+        <button class="btn-wa-reminder"
+                [disabled]="reminderLoading() || !acc.phone"
+                (click)="sendReminder(acc)"
+                [attr.title]="!acc.phone ? 'Sin teléfono registrado' : null">
+          @if (reminderLoading()) {
+            <span class="reminder-spinner"></span>
+          } @else {
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/>
+            </svg>
+          }
+          Enviar recordatorio WA
+        </button>
+      }
+
+      @if (reminderResult() && reminderResult()!.creditApplicationId === acc.creditApplicationId) {
+        <span class="reminder-msg" [class.reminder-msg--error]="!reminderResult()!.sent">
+          {{ reminderResult()!.message }}
+        </span>
+      }
+    </div>
+
+    <!-- Tab nav -->
+    <nav class="tab-nav" aria-label="Secciones de cobranza">
+      @for (tab of [
+        { id: 'schedule', label: 'Cronograma' },
+        { id: 'payments', label: 'Pagos recibidos' }
+      ]; track tab.id) {
+        <button class="tab-btn" type="button"
+                [class.tab-btn--active]="activeTab() === tab.id"
+                (click)="setTab($any(tab.id))">
+          {{ tab.label }}
+        </button>
+      }
+    </nav>
+
+    <div class="panel-body">
+
+      <!-- ─ Tab: Cronograma ────────────────────────────────── -->
+      @if (activeTab() === 'schedule') {
+        <section class="tab-content tab-content--table">
+
+          @if (schedLoading()) {
+            <div class="sched-skeleton">
+              @for (s of [1,2,3,4]; track s) {
+                <div class="skel-sched-row">
+                  <span class="skel skel--num"></span>
+                  <span class="skel skel--sub"></span>
+                  <span class="skel skel--amount"></span>
+                  <span class="skel skel--badge"></span>
+                </div>
+              }
+            </div>
+          } @else if (schedError()) {
+            <div class="tab-error" role="alert">
+              <span>{{ schedError() }}</span>
+              <button class="btn-retry" type="button" (click)="retrySchedule()">Reintentar</button>
+            </div>
+          } @else if (schedule().length === 0) {
+            <div class="empty-state empty-state--sm">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              <span>Sin cronograma disponible.</span>
+            </div>
+          } @else {
+            <div class="sched-table-wrap">
+              <table class="sched-table">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Vencimiento</th>
+                    <th scope="col" class="col-right">Capital</th>
+                    <th scope="col" class="col-right">Interés</th>
+                    <th scope="col" class="col-right">Total</th>
+                    <th scope="col">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (entry of schedule(); track entry.id; let i = $index) {
+                    <tr class="sched-row" [class.sched-row--overdue]="entry.status === 'OVERDUE'">
+                      <td class="col-num">{{ entry.installmentNumber }}</td>
+                      <td>
+                        <span class="sched-date">{{ entry.dueDate | date:'dd/MM/yy' }}</span>
+                        @if (entry.paidDate) {
+                          <span class="paid-date">Pag. {{ entry.paidDate | date:'dd/MM/yy' }}</span>
+                        }
+                      </td>
+                      <td class="col-right mono">{{ entry.principal | number:'1.2-2' }}</td>
+                      <td class="col-right mono">{{ entry.interest  | number:'1.2-2' }}</td>
+                      <td class="col-right mono strong">{{ entry.total | number:'1.2-2' }}</td>
+                      <td>
+                        <span class="inst-status" [attr.data-status]="entry.status">
+                          {{ INSTALLMENT_STATUS_LABEL[entry.status] }}
+                        </span>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+
+        </section>
+      }
+
+      <!-- ─ Tab: Pagos recibidos ───────────────────────────── -->
+      @if (activeTab() === 'payments') {
+        <section class="tab-content">
+
+          @if (paymentSuccess()) {
+            <div class="payment-success" role="status">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Pago registrado correctamente.
+            </div>
+          }
+
+          @if (paymentsLoading()) {
+            <div class="payments-skel">
+              @for (s of [1,2,3]; track s) {
+                <div class="skel-payment-row">
+                  <span class="skel skel--amount"></span>
+                  <span class="skel skel--badge"></span>
+                  <span class="skel skel--sub"></span>
+                </div>
+              }
+            </div>
+          } @else if (paymentsError()) {
+            <div class="tab-error" role="alert">
+              <span>{{ paymentsError() }}</span>
+              <button class="btn-retry" type="button" (click)="retryPayments()">Reintentar</button>
+            </div>
+          } @else if (!paymentFormOpen()) {
+
+            <button class="btn-register-payment" type="button" (click)="openPaymentForm()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+              Registrar pago
+            </button>
+
+            @if (payments().length === 0) {
+              <div class="empty-state empty-state--sm">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span>Sin pagos registrados aún.</span>
+              </div>
+            } @else {
+              <div class="payment-list">
+                @for (p of payments(); track p.id; let i = $index) {
+                  <div class="payment-item" [style.--idx]="animIdx(i)">
+                    <div class="payment-main">
+                      <span class="payment-amount">S/ {{ p.amount | number:'1.2-2' }}</span>
+                      <span class="payment-method">{{ PAYMENT_METHOD_LABEL[p.method] }}</span>
+                    </div>
+                    <div class="payment-meta">
+                      <span class="payment-date">{{ p.paymentDate | date:'dd/MM/yyyy HH:mm' }}</span>
+                      @if (p.reference) {
+                        <span class="payment-ref">Ref: {{ p.reference }}</span>
+                      }
+                      <span class="payment-by">Por: {{ p.registeredBy }}</span>
+                    </div>
+                    @if (p.notes) {
+                      <div class="payment-notes">{{ p.notes }}</div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+          }
+
+          <!-- ── Payment form ─────────────────────────────── -->
+          @if (paymentFormOpen()) {
+            <div class="payment-form">
+              <div class="payment-form-title">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                Registrar pago recibido
+              </div>
+
+              <div class="pf-fields">
+
+                <div class="pf-field">
+                  <label class="pf-label" for="pf-amount">Monto recibido (S/)</label>
+                  <input id="pf-amount" class="pf-input" type="number" min="0.01" step="0.01"
+                         placeholder="0.00"
+                         [(ngModel)]="paymentForm.amount" name="pfAmount" />
+                </div>
+
+                <div class="pf-field">
+                  <label class="pf-label" for="pf-method">Método de pago</label>
+                  <select id="pf-method" class="pf-select"
+                          [(ngModel)]="paymentForm.method" name="pfMethod">
+                    @for (m of paymentMethods; track m) {
+                      <option [value]="m">{{ PAYMENT_METHOD_LABEL[m] }}</option>
+                    }
+                  </select>
+                </div>
+
+                @if (needsReference(paymentForm.method)) {
+                  <div class="pf-field">
+                    <label class="pf-label" for="pf-ref">N° de operación / referencia</label>
+                    <input id="pf-ref" class="pf-input" type="text"
+                           placeholder="Ej. OP-2026-123456"
+                           [(ngModel)]="paymentForm.reference" name="pfRef" />
+                  </div>
+                }
+
+                <div class="pf-field">
+                  <label class="pf-label" for="pf-notes">Notas (opcional)</label>
+                  <input id="pf-notes" class="pf-input" type="text"
+                         placeholder="Observaciones del pago…"
+                         [(ngModel)]="paymentForm.notes" name="pfNotes" />
+                </div>
+
+              </div>
+
+              @if (paymentError()) {
+                <div class="pf-error" role="alert">{{ paymentError() }}</div>
+              }
+
+              <div class="pf-footer">
+                <button class="btn-cancel" type="button"
+                        (click)="paymentFormOpen.set(false)"
+                        [disabled]="paymentLoading()">Cancelar</button>
+                <button class="btn-pay" type="button" (click)="submitPayment()"
+                        [disabled]="paymentLoading() || !paymentForm.amount">
+                  @if (paymentLoading()) { <span class="spinner"></span> }
+                  Confirmar pago
+                </button>
+              </div>
+
+            </div>
+          }
+
+        </section>
+      }
+
+    </div><!-- /panel-body -->
+
+  }<!-- /if selected -->
+</aside>

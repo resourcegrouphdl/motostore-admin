@@ -1,0 +1,627 @@
+<div class="rep-page">
+
+  <!-- ── Page header ─────────────────────────────────────────────── -->
+  <header class="rep-header">
+    <div class="rep-header-left">
+      <h1 class="rep-title">Repuestos</h1>
+      @if (!loading()) {
+        <span class="rep-count">{{ totalCount() }} referencias</span>
+      }
+    </div>
+
+    <div class="rep-header-right">
+      @if (lowStockCount() > 0) {
+        <button
+          class="btn-alert"
+          type="button"
+          [class.btn-alert--active]="showLowStockOnly()"
+          (click)="toggleLowStockFilter()"
+          [attr.aria-pressed]="showLowStockOnly()"
+          aria-label="Filtrar repuestos bajo el mínimo">
+          <!-- pulse dot -->
+          <span class="alert-dot" aria-hidden="true"></span>
+          {{ lowStockCount() }} bajo mínimo
+        </button>
+      }
+      <button class="btn-add" type="button" (click)="openCreate()" aria-label="Registrar nuevo repuesto">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Nuevo repuesto
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Category chips ──────────────────────────────────────────── -->
+  <div class="filter-bar" role="group" aria-label="Filtrar por categoría">
+    @for (opt of CATEGORY_FILTER_OPTIONS; track opt.category) {
+      <button
+        class="chip"
+        [class.chip--active]="selectedCategory() === opt.category && !showLowStockOnly()"
+        type="button"
+        (click)="selectCategory(opt.category)"
+        [attr.aria-pressed]="selectedCategory() === opt.category && !showLowStockOnly()">
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ── Error ───────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- ── Loading skeleton ────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="table-wrap" aria-busy="true" aria-label="Cargando repuestos">
+      <table class="rep-table">
+        <thead>
+          <tr>
+            <th>SKU</th><th>Nombre / Marca</th><th>Categoría</th>
+            <th>Stock mín.</th><th>Estado</th><th>Precio lista</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of [1,2,3,4,5,6]; track s) {
+            <tr class="skeleton-row">
+              <td><span class="skel skel--sku"></span></td>
+              <td><span class="skel skel--name"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--status"></span></td>
+              <td><span class="skel skel--price"></span></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Empty state ─────────────────────────────────────────────── -->
+  @if (!loading() && filteredRepuestos().length === 0 && !error()) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16v-2"/>
+          <path d="M7.5 4.27 12 7l4.5-2.73M12 7v10M3.27 6.96 12 12l8.73-5.04"/>
+        </svg>
+      </div>
+      <p class="empty-title">
+        {{ showLowStockOnly() ? 'Sin repuestos bajo el mínimo' : selectedCategory() ? 'Sin repuestos en esta categoría' : 'El inventario de repuestos está vacío' }}
+      </p>
+      <p class="empty-sub">
+        {{ showLowStockOnly() ? 'El stock está al día en todas las referencias.' : 'Registra el primer repuesto para comenzar.' }}
+      </p>
+      @if (!showLowStockOnly() && !selectedCategory()) {
+        <button class="btn-add btn-add--md" type="button" (click)="openCreate()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nuevo repuesto
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Table ───────────────────────────────────────────────────── -->
+  @if (!loading() && filteredRepuestos().length > 0) {
+    <div class="table-wrap">
+      <table class="rep-table">
+        <thead>
+          <tr>
+            <th scope="col">SKU</th>
+            <th scope="col">Nombre / Marca</th>
+            <th scope="col">Categoría</th>
+            <th scope="col" class="col-num">Stock mín.</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="col-price">Precio lista</th>
+            <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (rep of filteredRepuestos(); track rep.id; let i = $index) {
+
+            <!-- ── Main row ──────────────────────────────────────── -->
+            <tr
+              class="rep-row"
+              [class.rep-row--low]="isLowStock(rep)"
+              [class.rep-row--expanded]="expandedId() === rep.id"
+              [style.--idx]="animIdx(i)"
+              (click)="toggleExpand(rep)"
+              [attr.aria-expanded]="expandedId() === rep.id"
+              role="button"
+              tabindex="0"
+              (keydown.enter)="toggleExpand(rep)"
+              (keydown.space)="toggleExpand(rep); $event.preventDefault()">
+
+              <!-- SKU -->
+              <td class="cell-sku">{{ rep.sku }}</td>
+
+              <!-- Nombre / Marca -->
+              <td class="cell-name">
+                <span class="name-primary">{{ rep.name }}</span>
+                @if (rep.brand) {
+                  <span class="name-brand">{{ rep.brand }}</span>
+                }
+              </td>
+
+              <!-- Categoría -->
+              <td>
+                <span class="cat-badge" [attr.data-color]="CATEGORY_COLOR[rep.category]">
+                  {{ CATEGORY_LABEL[rep.category] }}
+                </span>
+              </td>
+
+              <!-- Stock mínimo -->
+              <td class="cell-num">
+                <span class="min-stock-val">{{ rep.minimumStock }}</span>
+                <span class="min-stock-uom">{{ UOM_LABEL[rep.unitOfMeasure] }}</span>
+              </td>
+
+              <!-- Estado de stock -->
+              <td>
+                @if (isLowStock(rep)) {
+                  <span class="stock-status stock-status--danger">
+                    <span class="stock-dot stock-dot--pulse" aria-hidden="true"></span>
+                    Bajo mínimo
+                  </span>
+                } @else {
+                  <span class="stock-status stock-status--ok">
+                    <span class="stock-dot" aria-hidden="true"></span>
+                    En stock
+                  </span>
+                }
+              </td>
+
+              <!-- Precio lista -->
+              <td class="cell-price">
+                @if (rep.listPrice) {
+                  <span class="price-val">S/ {{ rep.listPrice | number:'1.2-2' }}</span>
+                } @else {
+                  <span class="no-val">—</span>
+                }
+              </td>
+
+              <!-- Acciones -->
+              <td class="cell-actions" (click)="$event.stopPropagation()">
+                <div class="row-actions">
+                  <button
+                    class="action-btn"
+                    type="button"
+                    title="Editar repuesto"
+                    (click)="openEdit(rep)"
+                    [attr.aria-label]="'Editar ' + rep.name">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                  </button>
+                  <button
+                    class="action-btn"
+                    type="button"
+                    title="Ajustar stock"
+                    (click)="openAdjust(rep)"
+                    [attr.aria-label]="'Ajustar stock de ' + rep.name">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19"/>
+                      <polyline points="19 12 12 19 5 12"/>
+                    </svg>
+                  </button>
+                  <button
+                    class="expand-btn"
+                    type="button"
+                    [class.expand-btn--open]="expandedId() === rep.id"
+                    [attr.aria-label]="expandedId() === rep.id ? 'Cerrar detalle de ' + rep.name : 'Ver stock de ' + rep.name"
+                    (click)="toggleExpand(rep)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+
+            </tr>
+
+            <!-- ── Stock detail row ──────────────────────────────── -->
+            @if (expandedId() === rep.id) {
+              <tr class="detail-row" aria-live="polite">
+                <td colspan="7" class="detail-cell">
+                  <div class="detail-content">
+
+                    @if (expandedStockLoading()) {
+                      <div class="detail-loading">
+                        <span class="skel skel--wh-row"></span>
+                        <span class="skel skel--wh-row"></span>
+                      </div>
+                    }
+
+                    @if (!expandedStockLoading() && expandedStock().length === 0) {
+                      <p class="detail-empty">Sin niveles de stock registrados para este repuesto.</p>
+                    }
+
+                    @if (!expandedStockLoading() && expandedStock().length > 0) {
+                      <div class="wh-grid">
+                        <span class="wh-grid-hd">Almacén</span>
+                        <span class="wh-grid-hd col-num">Disponible</span>
+                        <span class="wh-grid-hd col-num">Físico</span>
+                        <span class="wh-grid-hd col-num">Reservado</span>
+                        <span class="wh-grid-hd">Barra</span>
+
+                        @for (lvl of expandedStock(); track lvl.warehouseId) {
+                          <span class="wh-name">{{ lvl.warehouseName }}</span>
+                          <span class="wh-num" [class.wh-num--danger]="lvl.quantityAvailable < rep.minimumStock">
+                            {{ lvl.quantityAvailable }}
+                          </span>
+                          <span class="wh-num wh-num--muted">{{ lvl.quantityOnHand }}</span>
+                          <span class="wh-num wh-num--muted">{{ lvl.quantityReserved }}</span>
+                          <span class="wh-bar-wrap">
+                            <span class="wh-bar">
+                              <span
+                                class="wh-bar-fill"
+                                [attr.data-level]="lvl.quantityAvailable < rep.minimumStock ? 'danger' : lvl.quantityAvailable < rep.minimumStock * 2 ? 'warn' : 'ok'"
+                                [style.width.%]="rep.minimumStock > 0 ? (lvl.quantityAvailable / (rep.minimumStock * 2)) * 100 : (lvl.quantityAvailable > 0 ? 100 : 0)">
+                              </span>
+                            </span>
+                          </span>
+                        }
+                      </div>
+                    }
+
+                  </div>
+                </td>
+              </tr>
+            }
+
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     CREATE DIALOG — slide-in desde la derecha
+     ════════════════════════════════════════════════════════════════ -->
+<dialog #createDialog class="form-dialog" aria-labelledby="create-dialog-title">
+  <div class="fd-layout">
+
+    <!-- Header -->
+    <div class="fd-header">
+      <h2 class="fd-title" id="create-dialog-title">Nuevo repuesto</h2>
+      <button class="fd-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="fd-body">
+
+      <div class="fd-section">
+        <p class="fd-section-label">Identificación</p>
+        <div class="fd-field">
+          <label class="m-label" for="c-sku">SKU <span class="req" aria-hidden="true">*</span></label>
+          <input id="c-sku" class="m-input" type="text" placeholder="EJ: FRN-HONDA-CBF150"
+                 [(ngModel)]="createForm.sku" name="sku" required autocomplete="off">
+        </div>
+        <div class="fd-field">
+          <label class="m-label" for="c-name">Nombre <span class="req" aria-hidden="true">*</span></label>
+          <input id="c-name" class="m-input" type="text" placeholder="Ej: Pastilla de freno trasera"
+                 [(ngModel)]="createForm.name" name="name" required>
+        </div>
+        <div class="fd-row-2">
+          <div class="fd-field">
+            <label class="m-label" for="c-brand">Marca</label>
+            <input id="c-brand" class="m-input" type="text" placeholder="Honda, Yamaha…"
+                   [(ngModel)]="createForm.brand" name="brand">
+          </div>
+          <div class="fd-field">
+            <label class="m-label" for="c-uom">Unidad de medida <span class="req" aria-hidden="true">*</span></label>
+            <select id="c-uom" class="m-input" [(ngModel)]="createForm.unitOfMeasure" name="uom">
+              @for (uom of ALL_UOM; track uom) {
+                <option [value]="uom">{{ UOM_LABEL[uom] }} ({{ uom }})</option>
+              }
+            </select>
+          </div>
+        </div>
+        <div class="fd-field">
+          <label class="m-label" for="c-cat">Categoría <span class="req" aria-hidden="true">*</span></label>
+          <select id="c-cat" class="m-input" [(ngModel)]="createForm.category" name="category" required>
+            <option value="" disabled>Selecciona una categoría</option>
+            @for (cat of ALL_CATEGORIES; track cat) {
+              <option [value]="cat">{{ CATEGORY_LABEL[cat] }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="fd-divider"></div>
+
+      <div class="fd-section">
+        <p class="fd-section-label">Precios y alertas</p>
+        <div class="fd-row-2">
+          <div class="fd-field">
+            <label class="m-label" for="c-list">Precio lista (S/)</label>
+            <input id="c-list" class="m-input" type="number" min="0" step="0.01" placeholder="0.00"
+                   [(ngModel)]="createForm.listPrice" name="listPrice">
+          </div>
+          <div class="fd-field">
+            <label class="m-label" for="c-cost">Precio costo (S/)</label>
+            <input id="c-cost" class="m-input" type="number" min="0" step="0.01" placeholder="0.00"
+                   [(ngModel)]="createForm.costPrice" name="costPrice">
+          </div>
+        </div>
+        <div class="fd-field fd-field--sm">
+          <label class="m-label" for="c-min">Stock mínimo (alerta)</label>
+          <input id="c-min" class="m-input" type="number" min="0" placeholder="0"
+                 [(ngModel)]="createForm.minimumStock" name="minimumStock">
+          <span class="fd-hint">El sistema alertará cuando el stock disponible sea menor a este valor.</span>
+        </div>
+      </div>
+
+      <div class="fd-divider"></div>
+
+      <div class="fd-section">
+        <p class="fd-section-label">Stock inicial <span class="fd-optional">(opcional)</span></p>
+        <div class="fd-field">
+          <label class="m-label" for="c-wh">Almacén de entrada</label>
+          <select id="c-wh" class="m-input" [(ngModel)]="createForm.initialWarehouseId" name="initWh">
+            <option value="">Sin stock inicial</option>
+            @for (wh of warehouseList(); track wh.id) {
+              <option [value]="wh.id">{{ wh.name }}</option>
+            }
+          </select>
+        </div>
+        @if (createForm.initialWarehouseId) {
+          <div class="fd-field fd-field--sm">
+            <label class="m-label" for="c-stock">Cantidad inicial</label>
+            <input id="c-stock" class="m-input" type="number" min="1" placeholder="1"
+                   [(ngModel)]="createForm.initialStock" name="initStock">
+          </div>
+        }
+      </div>
+
+      @if (createError()) {
+        <div class="fd-error" role="alert">{{ createError() }}</div>
+      }
+
+    </div>
+
+    <!-- Footer -->
+    <div class="fd-footer">
+      <button class="m-btn m-btn--ghost" type="button" (click)="closeCreate()">Cancelar</button>
+      <button
+        class="m-btn m-btn--primary"
+        type="button"
+        (click)="submitCreate()"
+        [disabled]="createSubmitting() || !createForm.sku || !createForm.name || !createForm.category">
+        @if (createSubmitting()) {
+          <span class="btn-spinner" aria-hidden="true"></span> Registrando…
+        } @else {
+          Registrar repuesto
+        }
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     ADJUST STOCK DIALOG
+     ════════════════════════════════════════════════════════════════ -->
+<dialog #adjustDialog class="form-dialog form-dialog--sm" aria-labelledby="adjust-dialog-title">
+  <div class="fd-layout">
+
+    <div class="fd-header">
+      <div class="col-g4">
+        <h2 class="fd-title" id="adjust-dialog-title">Ajustar stock</h2>
+        @if (adjustTarget()) {
+          <span class="fd-subtitle">{{ adjustTarget()!.name }}</span>
+        }
+      </div>
+      <button class="fd-close" type="button" (click)="closeAdjust()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fd-body">
+
+      <div class="fd-section">
+        <div class="fd-field">
+          <label class="m-label" for="a-wh">Almacén <span class="req" aria-hidden="true">*</span></label>
+          <select id="a-wh" class="m-input" [(ngModel)]="adjustForm.warehouseId" name="awh" required>
+            <option value="" disabled>Selecciona el almacén</option>
+            @for (wh of warehouseList(); track wh.id) {
+              <option [value]="wh.id">{{ wh.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="fd-field">
+          <label class="m-label" for="a-delta">Cantidad (+ agregar / - retirar) <span class="req" aria-hidden="true">*</span></label>
+          <input id="a-delta" class="m-input" type="number" placeholder="Ej: 5 o -3"
+                 [(ngModel)]="adjustForm.quantityDelta" name="delta">
+          @if (adjustForm.quantityDelta > 0) {
+            <span class="fd-hint fd-hint--ok">Se agregarán {{ adjustForm.quantityDelta }} unidades al stock físico.</span>
+          }
+          @if (adjustForm.quantityDelta < 0) {
+            <span class="fd-hint fd-hint--warn">Se retirarán {{ -adjustForm.quantityDelta }} unidades del stock físico.</span>
+          }
+        </div>
+
+        <div class="fd-field">
+          <label class="m-label" for="a-reason">Motivo <span class="req" aria-hidden="true">*</span></label>
+          <input id="a-reason" class="m-input" type="text"
+                 placeholder="Ej: Corrección inventario anual, merma, etc."
+                 [(ngModel)]="adjustForm.reason" name="reason" required maxlength="500">
+          <span class="fd-hint">Obligatorio. Queda registrado en el historial de movimientos.</span>
+        </div>
+      </div>
+
+      @if (adjustError()) {
+        <div class="fd-error" role="alert">{{ adjustError() }}</div>
+      }
+
+    </div>
+
+    <div class="fd-footer">
+      <button class="m-btn m-btn--ghost" type="button" (click)="closeAdjust()">Cancelar</button>
+      <button
+        class="m-btn m-btn--primary"
+        type="button"
+        (click)="submitAdjust()"
+        [disabled]="adjustSubmitting() || !adjustForm.warehouseId || !adjustForm.reason.trim() || adjustForm.quantityDelta === 0">
+        @if (adjustSubmitting()) {
+          <span class="btn-spinner" aria-hidden="true"></span> Guardando…
+        } @else {
+          Confirmar ajuste
+        }
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     EDIT REPUESTO DIALOG
+     ════════════════════════════════════════════════════════════════ -->
+<dialog #editDialog class="form-dialog" aria-labelledby="edit-dialog-title">
+  <div class="fd-layout">
+
+    <div class="fd-header">
+      <div class="col-g4">
+        <h2 class="fd-title" id="edit-dialog-title">Editar repuesto</h2>
+        @if (editTarget()) {
+          <span class="fd-subtitle">SKU {{ editTarget()!.sku }}</span>
+        }
+      </div>
+      <button class="fd-close" type="button" (click)="closeEdit()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fd-body">
+      <div class="fd-section">
+
+        <!-- Nombre -->
+        <div class="fd-field">
+          <label class="m-label" for="ed-name">Nombre <span class="req" aria-hidden="true">*</span></label>
+          <input id="ed-name" class="m-input" type="text" name="ename" required maxlength="200"
+                 placeholder="Ej: Filtro de aceite Honda CB300"
+                 [(ngModel)]="editForm.name">
+        </div>
+
+        <!-- Categoría + UOM -->
+        <div class="fd-row">
+          <div class="fd-field">
+            <label class="m-label" for="ed-cat">Categoría <span class="req" aria-hidden="true">*</span></label>
+            <select id="ed-cat" class="m-input" name="ecat" required [(ngModel)]="editForm.category">
+              @for (cat of ALL_CATEGORIES; track cat) {
+                <option [value]="cat">{{ CATEGORY_LABEL[cat] }}</option>
+              }
+            </select>
+          </div>
+          <div class="fd-field">
+            <label class="m-label" for="ed-uom">Unidad</label>
+            <select id="ed-uom" class="m-input" name="euom" [(ngModel)]="editForm.unitOfMeasure">
+              @for (u of ALL_UOM; track u) {
+                <option [value]="u">{{ UOM_LABEL[u] }}</option>
+              }
+            </select>
+          </div>
+        </div>
+
+        <!-- Marca + Descripción -->
+        <div class="fd-field">
+          <label class="m-label" for="ed-brand">Marca</label>
+          <input id="ed-brand" class="m-input" type="text" name="ebrand" maxlength="80"
+                 placeholder="Ej: Honda, Yamaha, NGK"
+                 [(ngModel)]="editForm.brand">
+        </div>
+
+        <div class="fd-field">
+          <label class="m-label" for="ed-desc">Descripción</label>
+          <textarea id="ed-desc" class="m-input" name="edesc" rows="2" maxlength="500" style="height:auto;padding-top:8px;padding-bottom:8px"
+                    placeholder="Especificaciones adicionales…"
+                    [(ngModel)]="editForm.description"></textarea>
+        </div>
+
+        <!-- Precios -->
+        <div class="fd-row">
+          <div class="fd-field">
+            <label class="m-label" for="ed-list">Precio venta (S/)</label>
+            <input id="ed-list" class="m-input" type="number" min="0" step="0.01" name="elist"
+                   [(ngModel)]="editForm.listPrice">
+          </div>
+          <div class="fd-field">
+            <label class="m-label" for="ed-cost">Precio costo (S/)</label>
+            <input id="ed-cost" class="m-input" type="number" min="0" step="0.01" name="ecost"
+                   [(ngModel)]="editForm.costPrice">
+          </div>
+        </div>
+
+        <!-- Stock mínimo + Activo -->
+        <div class="fd-row">
+          <div class="fd-field">
+            <label class="m-label" for="ed-min">Stock mínimo</label>
+            <input id="ed-min" class="m-input" type="number" min="0" name="emin"
+                   [(ngModel)]="editForm.minimumStock">
+          </div>
+          <div class="fd-field fd-field--toggle">
+            <label class="m-label">Estado</label>
+            <label class="toggle-label">
+              <input type="checkbox" class="toggle-input" name="eactive"
+                     [(ngModel)]="editForm.active">
+              <span class="toggle-track" aria-hidden="true"></span>
+              <span class="toggle-text">{{ editForm.active ? 'Activo' : 'Inactivo' }}</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      @if (editError()) {
+        <div class="fd-error" role="alert">{{ editError() }}</div>
+      }
+    </div>
+
+    <div class="fd-footer">
+      <button class="m-btn m-btn--ghost" type="button" (click)="closeEdit()">Cancelar</button>
+      <button
+        class="m-btn m-btn--primary"
+        type="button"
+        (click)="submitEdit()"
+        [disabled]="editSubmitting() || !editForm.name || !editForm.category">
+        @if (editSubmitting()) {
+          <span class="btn-spinner" aria-hidden="true"></span> Guardando…
+        } @else {
+          Guardar cambios
+        }
+      </button>
+    </div>
+
+  </div>
+</dialog>

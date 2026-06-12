@@ -1,0 +1,615 @@
+<!-- ── KPI strip ──────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <span class="kpi-num">{{ totalCount() }}</span>
+    <span class="kpi-tag">solicitudes</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--warn">{{ pendingCount() }}</span>
+    <span class="kpi-tag">pendientes</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--ok">{{ approvedCount() }}</span>
+    <span class="kpi-tag">aprobadas</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--blue">{{ disbursedCount() }}</span>
+    <span class="kpi-tag">desembolsadas</span>
+  </div>
+</div>
+
+<!-- ── Toolbar ────────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+    @for (f of FILTER_STATUSES; track f.value) {
+      <button class="chip" type="button"
+              [class.chip--active]="filterStatus() === f.value"
+              (click)="filterStatus.set(f.value)">
+        {{ f.label }}
+        @if (f.value && countByStatus().get(f.value)) {
+          <span class="chip-count">{{ countByStatus().get(f.value) }}</span>
+        }
+      </button>
+    }
+  </div>
+  <input class="search-input" type="search" placeholder="Buscar nombre o DNI…"
+         [value]="query()" (input)="query.set($any($event.target).value)"
+         aria-label="Buscar solicitudes" />
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="credit-table">
+    <thead>
+      <tr>
+        <th scope="col">Solicitante</th>
+        <th scope="col">Moto / Monto</th>
+        <th scope="col" class="col-center">Score</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Recibida</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        @for (s of [1,2,3,4]; track s) {
+          <tr class="skel-row">
+            <td><span class="skel skel--name"></span><span class="skel skel--sub"></span></td>
+            <td><span class="skel skel--name"></span><span class="skel skel--sub"></span></td>
+            <td><span class="skel skel--score"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--date"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && filtered().length === 0 && !error()) {
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   style="color:var(--ink-3)" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/>
+                <line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/>
+              </svg>
+              <span>No hay solicitudes de crédito.</span>
+            </div>
+          </td>
+        </tr>
+      }
+
+      @for (app of filtered(); track app.id; let i = $index) {
+        <tr class="credit-row" [style.--idx]="animIdx(i)"
+            [class.credit-row--selected]="selected()?.id === app.id"
+            (click)="openDetail(app)" role="button" tabindex="0"
+            (keydown.enter)="openDetail(app)">
+
+          <!-- Solicitante -->
+          <td class="cell-person">
+            <span class="person-name">{{ app.fullName }}</span>
+            <span class="person-sub">DNI {{ app.dni }}</span>
+          </td>
+
+          <!-- Moto / Monto -->
+          <td class="cell-moto">
+            <span class="moto-desc">{{ app.motoDescription ?? '—' }}</span>
+            <span class="moto-amount">S/ {{ app.requestedAmount | number:'1.0-0' }}
+              @if (app.initialAmount) { · ini S/ {{ app.initialAmount | number:'1.0-0' }} }
+              · {{ app.requestedTermMonths }}m
+            </span>
+          </td>
+
+          <!-- Score -->
+          <td class="cell-score">
+            <div class="score-wrap">
+              <span class="score-num" [style.color]="scoreColor(app.score)">{{ app.score }}</span>
+              <div class="score-bar-bg">
+                <div class="score-bar-fill"
+                     [style.width.%]="app.score"
+                     [style.background]="scoreColor(app.score)"></div>
+              </div>
+              <span class="qual-label" [attr.data-qual]="app.qualification">
+                {{ QUAL_LABEL[app.qualification] ?? app.qualification }}
+              </span>
+            </div>
+          </td>
+
+          <!-- Estado -->
+          <td>
+            <span class="status-badge" [attr.data-status]="app.status">
+              {{ STATUS_LABEL[app.status] }}
+            </span>
+          </td>
+
+          <!-- Fecha -->
+          <td class="cell-date">
+            <span>{{ app.createdAt | date:'dd/MM/yy' }}</span>
+            <span class="days-ago">hace {{ daysAgo(app.createdAt) }}d</span>
+          </td>
+
+          <!-- Chevron -->
+          <td class="cell-chevron">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </td>
+
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Detail panel backdrop ─────────────────────────────── -->
+@if (selected()) {
+  <div class="panel-backdrop" (click)="closeDetail()" aria-hidden="true"></div>
+}
+
+<!-- ── Detail panel ──────────────────────────────────────── -->
+<aside class="detail-panel" [class.detail-panel--open]="!!selected()"
+       role="complementary" aria-label="Expediente de crédito">
+  @if (selected(); as app) {
+
+    <!-- Panel header -->
+    <div class="panel-header">
+      <div class="panel-header-main">
+        <div class="panel-name">{{ app.fullName }}</div>
+        <div class="panel-sub">DNI {{ app.dni }}
+          @if (app.phone) { · {{ app.phone }} }
+        </div>
+      </div>
+      <span class="status-badge status-badge--lg" [attr.data-status]="app.status">
+        {{ STATUS_LABEL[app.status] }}
+      </span>
+      <button class="panel-close" type="button" (click)="closeDetail()" aria-label="Cerrar panel">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Score bar strip -->
+    <div class="score-strip">
+      <span class="score-strip-label">Score crediticio</span>
+      <div class="score-strip-bar">
+        <div class="score-strip-fill"
+             [style.width.%]="app.score"
+             [style.background]="scoreColor(app.score)">
+        </div>
+      </div>
+      <span class="score-strip-num" [style.color]="scoreColor(app.score)">{{ app.score }}/100</span>
+      <span class="qual-pill" [attr.data-qual]="app.qualification">
+        {{ QUAL_LABEL[app.qualification] ?? app.qualification }}
+      </span>
+    </div>
+
+    <!-- Tab nav -->
+    <nav class="tab-nav" aria-label="Secciones del expediente">
+      @for (tab of [
+        { id: 'summary',    label: 'Resumen' },
+        { id: 'timeline',   label: 'Timeline' },
+        { id: 'conditions', label: 'Condiciones' },
+        { id: 'documents',  label: 'Documentos' }
+      ]; track tab.id) {
+        <button class="tab-btn" type="button"
+                [class.tab-btn--active]="activeTab() === tab.id"
+                (click)="setTab($any(tab.id))">
+          {{ tab.label }}
+        </button>
+      }
+    </nav>
+
+    <div class="panel-body">
+
+      <!-- ─ Tab: Resumen ───────────────────────────────────── -->
+      @if (activeTab() === 'summary') {
+        <section class="tab-content">
+
+          <div class="info-group">
+            <h3 class="group-title">Datos personales</h3>
+            <dl class="info-grid">
+              <dt>Nombre</dt>      <dd>{{ app.fullName }}</dd>
+              <dt>DNI</dt>         <dd class="mono">{{ app.dni }}</dd>
+              @if (app.email) { <dt>Email</dt>  <dd>{{ app.email }}</dd> }
+              @if (app.phone) { <dt>Teléfono</dt> <dd class="mono">{{ app.phone }}</dd> }
+              <dt>Empleo</dt>      <dd>{{ EMP_LABEL[app.employmentType] }}</dd>
+              <dt>Ingreso mensual</dt>
+              <dd class="mono strong">S/ {{ app.monthlyIncome | number:'1.0-0' }}</dd>
+            </dl>
+          </div>
+
+          <div class="info-group">
+            <h3 class="group-title">Solicitud</h3>
+            <dl class="info-grid">
+              @if (app.motoDescription) {
+                <dt>Moto</dt> <dd>{{ app.motoDescription }}</dd>
+              }
+              <dt>Monto solicitado</dt>
+              <dd class="mono strong">S/ {{ app.requestedAmount | number:'1.2-2' }}</dd>
+              @if (app.initialAmount) {
+                <dt>Inicial</dt>
+                <dd class="mono">S/ {{ app.initialAmount | number:'1.2-2' }}</dd>
+                <dt>Financiado</dt>
+                <dd class="mono">S/ {{ (app.requestedAmount - app.initialAmount) | number:'1.2-2' }}</dd>
+              }
+              <dt>Plazo solicitado</dt>
+              <dd>{{ app.requestedTermMonths }} meses</dd>
+              <dt>Cuota estimada</dt>
+              <dd class="mono strong">S/ {{ cuotaFor(app) | number:'1.2-2' }}/mes</dd>
+            </dl>
+          </div>
+
+          @if (app.rejectionReason) {
+            <div class="rejection-box">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+              </svg>
+              <div>
+                <div class="rejection-title">Motivo de rechazo</div>
+                <div class="rejection-text">{{ app.rejectionReason }}</div>
+              </div>
+            </div>
+          }
+
+        </section>
+      }
+
+      <!-- ─ Tab: Timeline ──────────────────────────────────── -->
+      @if (activeTab() === 'timeline') {
+        <section class="tab-content">
+          <ol class="timeline" aria-label="Historial del expediente">
+            @for (step of timelineSteps(app); track step.label; let last = $last) {
+              <li class="timeline-step" [attr.data-state]="step.state">
+                <div class="step-dot">
+                  @if (step.state === 'done') {
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="3" stroke-linecap="round"
+                         stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  } @else if (step.state === 'active') {
+                    <div class="step-pulse"></div>
+                  }
+                </div>
+                @if (!last) { <div class="step-line"></div> }
+                <div class="step-content">
+                  <div class="step-label">{{ step.label }}</div>
+                  @if (step.ts) {
+                    <div class="step-ts">{{ step.ts | date:'dd MMM yyyy, HH:mm' }}</div>
+                  } @else {
+                    <div class="step-ts step-ts--pending">Pendiente</div>
+                  }
+                </div>
+              </li>
+            }
+          </ol>
+        </section>
+      }
+
+      <!-- ─ Tab: Condiciones ───────────────────────────────── -->
+      @if (activeTab() === 'conditions') {
+        <section class="tab-content">
+          @if (app.approvedAmount || app.approvedTermMonths) {
+            <div class="conditions-card">
+              <div class="cond-row">
+                <span class="cond-label">Monto aprobado</span>
+                <span class="cond-val cond-val--big">S/ {{ app.approvedAmount | number:'1.2-2' }}</span>
+              </div>
+              <div class="cond-row">
+                <span class="cond-label">Plazo</span>
+                <span class="cond-val">{{ app.approvedTermMonths }} meses</span>
+              </div>
+              @if (app.approvedRateTea) {
+                <div class="cond-row">
+                  <span class="cond-label">TEA</span>
+                  <span class="cond-val">{{ app.approvedRateTea }}%</span>
+                </div>
+              }
+              <div class="cond-row">
+                <span class="cond-label">Cuota mensual</span>
+                <span class="cond-val cond-val--big cond-val--accent">
+                  S/ {{ cuotaFor(app) | number:'1.2-2' }}/mes
+                </span>
+              </div>
+              @if (app.fintech) {
+                <div class="cond-row">
+                  <span class="cond-label">Fintech</span>
+                  <span class="cond-val fintech-pill">{{ app.fintech }}</span>
+                </div>
+              }
+              @if (app.approvedAt) {
+                <div class="cond-row">
+                  <span class="cond-label">Aprobada el</span>
+                  <span class="cond-val">{{ app.approvedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="empty-conditions">
+              <p>Aún no se han definido condiciones de aprobación.</p>
+              @if (app.status === 'IN_REVIEW') {
+                <p class="empty-hint">Usa el botón "Aprobar" para ingresar las condiciones.</p>
+              }
+            </div>
+          }
+        </section>
+      }
+
+      <!-- ─ Tab: Documentos ──────────────────────────────── -->
+      @if (activeTab() === 'documents') {
+        <section class="tab-content">
+
+          @if (docsLoading()) {
+            <div class="doc-loading">
+              @for (s of [1,2,3]; track s) {
+                <div class="doc-card doc-card--skel">
+                  <span class="skel skel--doc-icon"></span>
+                  <span class="skel skel--doc-title"></span>
+                  <span class="skel skel--doc-badge"></span>
+                </div>
+              }
+            </div>
+          } @else if (documents().length === 0) {
+            <div class="doc-empty">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+                   aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span>Sin documentos cargados aún.</span>
+            </div>
+          } @else {
+            <div class="doc-list">
+              @for (doc of documents(); track doc.id; let i = $index) {
+                <div class="doc-card" [attr.data-status]="doc.status" [style.--idx]="animIdx(i)">
+
+                  <!-- Header: icon + tipo + badge + botón ver -->
+                  <div class="doc-header">
+                    <span class="doc-icon" aria-hidden="true">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                      </svg>
+                    </span>
+                    <div class="doc-meta">
+                      <span class="doc-type-label">{{ DOC_TYPE_LABEL[doc.documentType] }}</span>
+                      @if (doc.fileName) {
+                        <span class="doc-filename">{{ doc.fileName }}</span>
+                      }
+                    </div>
+                    <span class="doc-status-badge" [attr.data-status]="doc.status">
+                      {{ DOC_STATUS_LABEL[doc.status] }}
+                    </span>
+                    @if (doc.status === 'UPLOADED' || doc.status === 'APPROVED' || doc.status === 'REJECTED') {
+                      <button class="doc-view-btn" type="button"
+                              (click)="openDocUrl(doc.id)"
+                              aria-label="Ver documento">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                          <circle cx="12" cy="12" r="3"/>
+                        </svg>
+                        Ver
+                      </button>
+                    }
+                  </div>
+
+                  <!-- OCR data (si existe) -->
+                  @if (parseOcr(doc.ocrData).length > 0) {
+                    <dl class="doc-ocr-grid">
+                      @for (pair of parseOcr(doc.ocrData); track pair.key) {
+                        <dt>{{ pair.key }}</dt>
+                        <dd>{{ pair.val }}</dd>
+                      }
+                    </dl>
+                  }
+
+                  <!-- Notas de revisión previas -->
+                  @if (doc.reviewNotes) {
+                    <div class="doc-review-notes" [attr.data-status]="doc.status">
+                      <span class="notes-label">Nota:</span> {{ doc.reviewNotes }}
+                    </div>
+                  }
+
+                  <!-- Acciones de revisión (solo si UPLOADED) -->
+                  @if (doc.status === 'UPLOADED') {
+                    @if (docRejectOpen() !== doc.id) {
+                      <div class="doc-actions">
+                        <button class="btn-doc-approve" type="button"
+                                [disabled]="docReviewLoading() === doc.id"
+                                (click)="reviewDoc(doc.id, true)">
+                          @if (docReviewLoading() === doc.id) { <span class="spinner spinner--sm"></span> }
+                          Aprobar
+                        </button>
+                        <button class="btn-doc-reject" type="button"
+                                [disabled]="!!docReviewLoading()"
+                                (click)="docRejectOpen.set(doc.id); docRejectNotes.set('')">
+                          Rechazar
+                        </button>
+                      </div>
+                    } @else {
+                      <!-- Inline reject mini-form -->
+                      <div class="doc-reject-form">
+                        <textarea class="af-textarea af-textarea--sm" rows="2"
+                                  placeholder="Motivo del rechazo…"
+                                  [value]="docRejectNotes()"
+                                  (input)="docRejectNotes.set($any($event.target).value)"
+                                  aria-label="Motivo de rechazo del documento"></textarea>
+                        <div class="doc-actions">
+                          <button class="btn-cancel btn-cancel--sm" type="button"
+                                  (click)="docRejectOpen.set(null)">Cancelar</button>
+                          <button class="btn-doc-reject btn-doc-reject--confirm" type="button"
+                                  [disabled]="docReviewLoading() === doc.id || !docRejectNotes().trim()"
+                                  (click)="reviewDoc(doc.id, false)">
+                            @if (docReviewLoading() === doc.id) { <span class="spinner spinner--sm"></span> }
+                            Confirmar rechazo
+                          </button>
+                        </div>
+                      </div>
+                    }
+                  }
+
+                </div>
+              }
+            </div>
+          }
+
+        </section>
+      }
+
+    </div><!-- /panel-body -->
+
+    <!-- ─ Approve form (inline) ───────────────────────────── -->
+    @if (approveOpen()) {
+      <div class="action-form">
+        <div class="action-form-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Condiciones de aprobación
+        </div>
+
+        <div class="af-fields">
+          <div class="af-field">
+            <label class="af-label" for="af-amount">Monto a aprobar (S/)</label>
+            <input id="af-amount" class="af-input" type="number" min="0" step="100"
+                   [(ngModel)]="approveForm.amount" name="afAmount" />
+          </div>
+          <div class="af-field">
+            <label class="af-label" for="af-term">Plazo (meses)</label>
+            <select id="af-term" class="af-select" [(ngModel)]="approveForm.termMonths" name="afTerm">
+              @for (t of TERM_OPTIONS; track t) {
+                <option [value]="t">{{ t }} meses</option>
+              }
+            </select>
+          </div>
+          <div class="af-field">
+            <label class="af-label" for="af-tea">TEA (%)</label>
+            <input id="af-tea" class="af-input" type="number" min="0" max="200" step="0.5"
+                   [(ngModel)]="approveForm.rateTea" name="afTea" />
+          </div>
+          <div class="af-field">
+            <label class="af-label" for="af-fintech">Fintech</label>
+            <input id="af-fintech" class="af-input" type="text"
+                   [(ngModel)]="approveForm.fintech" name="afFintech" />
+          </div>
+        </div>
+
+        <div class="af-cuota-preview">
+          Cuota estimada:
+          <strong>S/ {{ cuotaPreview() | number:'1.2-2' }}/mes</strong>
+        </div>
+
+        @if (actionError()) {
+          <div class="action-error" role="alert">{{ actionError() }}</div>
+        }
+
+        <div class="af-footer">
+          <button class="btn-cancel" type="button" (click)="approveOpen.set(false)"
+                  [disabled]="actionLoading()">Cancelar</button>
+          <button class="btn-approve" type="button" (click)="submitApprove()"
+                  [disabled]="actionLoading() || !approveForm.amount || !approveForm.fintech">
+            @if (actionLoading()) { <span class="spinner"></span> }
+            Confirmar aprobación
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ─ Reject form (inline) ────────────────────────────── -->
+    @if (rejectOpen()) {
+      <div class="action-form action-form--danger">
+        <div class="action-form-title action-form-title--danger">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          Motivo de rechazo
+        </div>
+        <textarea class="af-textarea" rows="3" placeholder="Explica el motivo del rechazo…"
+                  [value]="rejectReason()"
+                  (input)="rejectReason.set($any($event.target).value)"
+                  aria-label="Motivo de rechazo"></textarea>
+
+        @if (actionError()) {
+          <div class="action-error" role="alert">{{ actionError() }}</div>
+        }
+
+        <div class="af-footer">
+          <button class="btn-cancel" type="button" (click)="rejectOpen.set(false)"
+                  [disabled]="actionLoading()">Cancelar</button>
+          <button class="btn-reject" type="button" (click)="submitReject()"
+                  [disabled]="actionLoading() || !rejectReason().trim()">
+            @if (actionLoading()) { <span class="spinner"></span> }
+            Rechazar solicitud
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ─ Action bar ──────────────────────────────────────── -->
+    @if (!approveOpen() && !rejectOpen()) {
+      <div class="action-bar">
+        @if (actionError()) {
+          <div class="action-error action-error--inline" role="alert">{{ actionError() }}</div>
+        }
+
+        @if (app.status === 'SUBMITTED') {
+          <button class="btn-action btn-action--review" type="button"
+                  (click)="markInReview(app)" [disabled]="actionLoading()">
+            @if (actionLoading()) { <span class="spinner spinner--sm"></span> }
+            Tomar en revisión
+          </button>
+        }
+        @if (app.status === 'IN_REVIEW') {
+          <button class="btn-action btn-action--approve" type="button"
+                  (click)="openApprove()" [disabled]="actionLoading()">
+            Aprobar
+          </button>
+          <button class="btn-action btn-action--reject" type="button"
+                  (click)="openReject()" [disabled]="actionLoading()">
+            Rechazar
+          </button>
+        }
+        @if (app.status === 'APPROVED' || app.status === 'CONDITIONAL') {
+          <button class="btn-action btn-action--disburse" type="button"
+                  (click)="disburse(app)" [disabled]="actionLoading()">
+            @if (actionLoading()) { <span class="spinner spinner--sm"></span> }
+            Confirmar desembolso
+          </button>
+          <button class="btn-action btn-action--reject" type="button"
+                  (click)="openReject()" [disabled]="actionLoading()">
+            Rechazar
+          </button>
+        }
+        @if (app.status === 'SUBMITTED' || app.status === 'IN_REVIEW') {
+          <button class="btn-action btn-action--secondary" type="button"
+                  (click)="openApprove()" [disabled]="actionLoading()">
+            Aprobar directo
+          </button>
+        }
+      </div>
+    }
+
+  }<!-- /if selected -->
+</aside>

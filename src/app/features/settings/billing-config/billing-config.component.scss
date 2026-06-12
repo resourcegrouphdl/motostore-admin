@@ -1,0 +1,118 @@
+/* ── Section header ───────────────────────────────────────── */
+.section-header { margin-bottom: 24px; }
+.section-title  { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 6px; }
+.section-desc   { font-size: 13px; color: var(--ink-3); margin: 0; line-height: 1.5; }
+
+/* ── Form ─────────────────────────────────────────────────── */
+.billing-form { display: flex; flex-direction: column; gap: 20px; max-width: 680px; }
+
+.form-section {
+  border: 1.5px solid var(--border); border-radius: var(--r-lg);
+  padding: 18px 20px 20px; margin: 0;
+}
+
+.section-legend {
+  font-size: 12px; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 0 6px;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.field {
+  display: flex; flex-direction: column; gap: 5px;
+  &--wide { grid-column: span 2; }
+  &--full { grid-column: 1 / -1; }
+}
+
+.field-label { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.field-hint  { font-size: 11px; color: var(--ink-3); }
+
+.field-input, .field-select {
+  padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface);
+  transition: border-color 120ms; width: 100%; box-sizing: border-box;
+  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+}
+
+.field-select {
+  appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A85' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+}
+
+/* ── Secret field ─────────────────────────────────────────── */
+.secret-wrap {
+  position: relative;
+  .field-input--secret { padding-right: 40px; }
+}
+
+.reveal-btn {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 28px; height: 28px; border: none; background: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; border-radius: var(--r-sm);
+  color: var(--ink-3); transition: color 120ms, background 120ms;
+  &:hover { background: var(--bg-2); color: var(--ink); }
+}
+
+/* ── Footer ───────────────────────────────────────────────── */
+.form-footer {
+  display: flex; align-items: center; gap: 14px; padding-top: 4px;
+  justify-content: flex-end;
+}
+
+.save-error {
+  font-size: 13px; color: var(--danger);
+  animation: fade-in 200ms;
+}
+
+.save-ok {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 13px; color: oklch(38% 0.14 152); font-weight: 600;
+  animation: fade-in 200ms;
+}
+
+.btn-save {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 22px; border: none; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; transition: filter 120ms;
+  &:hover:not(:disabled) { filter: brightness(1.1); }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+/* ── Spinner ──────────────────────────────────────────────── */
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,.4); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+
+/* ── Skeleton ─────────────────────────────────────────────── */
+.skel-form { display: flex; flex-direction: column; gap: 16px; max-width: 680px; }
+.skel-field { display: flex; flex-direction: column; gap: 6px; }
+@mixin skel-base {
+  display: block; border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-2) 25%, color-mix(in oklab, var(--bg-2) 60%, var(--surface)) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%; animation: shimmer 1.4s linear infinite;
+}
+.skel {
+  &--label { @include skel-base; width: 80px;  height: 12px; }
+  &--input { @include skel-base; width: 100%; height: 38px; border-radius: var(--r-sm); }
+}
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shimmer  { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel    { animation: none; background: var(--bg-2); }
+  .spinner { animation: none; }
+  .save-ok, .save-error { animation: none; }
+}

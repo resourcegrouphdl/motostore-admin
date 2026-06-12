@@ -1,0 +1,66 @@
+<!-- ── Header ─────────────────────────────────────────────── -->
+<div class="section-header">
+  <h2 class="section-title">Fintechs disponibles</h2>
+  <p class="section-desc">
+    Activa las entidades con las que operas. Solo las fintechs activadas
+    aparecerán como opción en el pipeline de oportunidades.
+  </p>
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Loading grid ───────────────────────────────────────── -->
+@if (loading()) {
+  <div class="fintech-grid">
+    @for (s of [1,2,3,4,5]; track s) {
+      <div class="fintech-card fintech-card--skel">
+        <span class="skel skel--logo"></span>
+        <div class="skel-body">
+          <span class="skel skel--name"></span>
+          <span class="skel skel--desc"></span>
+        </div>
+        <span class="skel skel--toggle"></span>
+      </div>
+    }
+  </div>
+}
+
+<!-- ── Cards ──────────────────────────────────────────────── -->
+@if (!loading() && fintechs().length > 0) {
+  <div class="fintech-grid">
+    @for (f of fintechs(); track f.code; let i = $index) {
+      <div class="fintech-card" [class.fintech-card--enabled]="f.isEnabled"
+           [style.--idx]="i">
+
+        <div class="fintech-logo" [attr.aria-label]="f.name">
+          {{ f.name.slice(0,2).toUpperCase() }}
+        </div>
+
+        <div class="fintech-info">
+          <span class="fintech-name">{{ f.name }}</span>
+          @if (f.description) {
+            <span class="fintech-desc">{{ f.description }}</span>
+          }
+        </div>
+
+        <button class="toggle-btn"
+                type="button"
+                [class.toggle-btn--on]="f.isEnabled"
+                [class.toggle-btn--loading]="toggling() === f.code"
+                (click)="toggle(f)"
+                [attr.aria-label]="(f.isEnabled ? 'Desactivar' : 'Activar') + ' ' + f.name"
+                [attr.aria-pressed]="f.isEnabled"
+                [disabled]="toggling() !== null">
+          @if (toggling() === f.code) {
+            <span class="toggle-spinner" aria-hidden="true"></span>
+          } @else {
+            <span class="toggle-thumb" aria-hidden="true"></span>
+          }
+        </button>
+
+      </div>
+    }
+  </div>
+}

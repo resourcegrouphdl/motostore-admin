@@ -1,0 +1,543 @@
+$ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+:host { display: block; }
+
+// ── Page ─────────────────────────────────────────────────────
+.an-page {
+  padding: 28px 32px 56px;
+  max-width: 1100px;
+}
+
+// ── Header ───────────────────────────────────────────────────
+.an-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.an-title {
+  font-size: 1.4rem;
+  font-weight: 600;
+  letter-spacing: -.03em;
+  color: var(--ink);
+  margin: 0 0 3px;
+}
+
+.an-sub {
+  font-size: .78rem;
+  color: var(--ink);
+  opacity: .5;
+  margin: 0;
+}
+
+// ── Period presets ────────────────────────────────────────────
+.period-presets {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  padding: 6px 13px;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink);
+  font-size: .78rem;
+  cursor: pointer;
+  transition:
+    background 110ms $ease-expo,
+    border-color 110ms $ease-expo,
+    color 110ms $ease-expo;
+
+  &:hover { background: var(--bg-2); }
+  &:active { transform: scale(0.97); }
+
+  &--active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-ink);
+  }
+}
+
+// ── Alert strip ───────────────────────────────────────────────
+.an-alert-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.an-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity 120ms $ease-expo, transform 80ms $ease-expo;
+
+  // @starting-style enter
+  opacity: 1;
+  @starting-style { opacity: 0; transform: translateY(4px); }
+
+  &:hover { opacity: .82; }
+  &:active { transform: scale(0.98); }
+
+  &[data-type='warn']   { background: oklch(0.97 0.04 80);  color: oklch(0.42 0.13 60); }
+  &[data-type='danger'] { background: oklch(0.96 0.04 15);  color: oklch(0.42 0.18 15); }
+  &[data-type='info']   { background: oklch(0.95 0.02 260); color: oklch(0.38 0.10 260); }
+}
+
+.alert-icon   { flex-shrink: 0; }
+.alert-chevron { margin-left: 2px; opacity: .55; }
+
+// ── Tab bar ───────────────────────────────────────────────────
+.tab-bar {
+  display: flex;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 24px;
+}
+
+.tab-btn {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  font-size: .83rem;
+  color: var(--ink);
+  opacity: .5;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: opacity 120ms $ease-expo, border-color 120ms $ease-expo;
+
+  &:hover { opacity: .75; }
+  &:active { transform: scale(0.97); }
+
+  &--active {
+    opacity: 1;
+    border-bottom-color: var(--accent);
+    font-weight: 500;
+  }
+}
+
+// ── Tab content — enter animation ─────────────────────────────
+// Emil: 140ms (frequent tab switch → fast)
+// Jakub: blur+translate recipe
+.an-tab-content {
+  transition:
+    opacity 140ms $ease-expo,
+    transform 140ms $ease-expo,
+    filter 130ms $ease-expo;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(3px);
+  }
+}
+
+// ── KPI strip ─────────────────────────────────────────────────
+.an-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+
+  @media (max-width: 800px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.an-kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  // Motion: @starting-style + nth-child stagger (Jakub recipe, Emil timing)
+  transition:
+    opacity 160ms $ease-expo,
+    transform 160ms $ease-expo,
+    filter 160ms $ease-expo;
+
+  @starting-style { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+
+  &:nth-child(1) { transition-delay: 0ms; }
+  &:nth-child(2) { transition-delay: 25ms; }
+  &:nth-child(3) { transition-delay: 50ms; }
+  &:nth-child(4) { transition-delay: 75ms; }
+}
+
+.kpi-label {
+  font-size: .72rem;
+  color: var(--ink);
+  opacity: .5;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.kpi-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -.03em;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+
+  // Fade-in on data arrival
+  transition: opacity 200ms $ease-expo;
+  @starting-style { opacity: 0; }
+}
+
+.kpi-delta {
+  font-size: .73rem;
+  font-weight: 500;
+
+  &.delta--pos { color: oklch(0.50 0.17 152); }
+  &.delta--neg { color: oklch(0.48 0.20 18); }
+  &.delta--neu { color: var(--ink); opacity: .45; }
+}
+
+// ── Projection banner ─────────────────────────────────────────
+.an-projection {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  border-radius: var(--r-sm);
+  font-size: .80rem;
+  margin-bottom: 24px;
+
+  transition: opacity 200ms $ease-expo;
+  @starting-style { opacity: 0; }
+
+  svg { flex-shrink: 0; opacity: .75; }
+}
+
+// ── Section head (label + export) ─────────────────────────────
+.an-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.an-section-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: .55;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.an-table-label {
+  font-size: .78rem;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: .55;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin: 24px 0 12px;
+}
+
+// ── Export button (secondary) ─────────────────────────────────
+.btn-export-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink);
+  font-size: .75rem;
+  cursor: pointer;
+  opacity: .75;
+  transition: background 100ms $ease-expo, opacity 100ms $ease-expo, transform 80ms $ease-expo;
+
+  &:hover { background: var(--bg-2); opacity: 1; }
+  &:active { transform: scale(0.97); }
+}
+
+// Export icon swap animation (Jakub: blur+scale+opacity)
+.export-icon-wrap {
+  display: flex;
+  align-items: center;
+  transition:
+    opacity 160ms $ease-expo,
+    filter 160ms $ease-expo,
+    transform 160ms $ease-expo;
+
+  @starting-style { opacity: 0; filter: blur(4px); transform: scale(0.9); }
+}
+
+// ── Bar chart ─────────────────────────────────────────────────
+.chart-wrap {
+  display: flex;
+  gap: 6px;
+  height: 180px;
+  margin-bottom: 4px;
+
+  &--sm { height: 140px; }
+}
+
+.chart-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  min-width: 0;
+}
+
+.chart-val {
+  font-size: .66rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  opacity: .55;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.chart-bar-track {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end; // bars grow from the bottom
+}
+
+// Bar fill — scaleY enter animation from the bottom
+// Emil: not keyboard-initiated, occasional → animate
+// Jakub: 280ms with expo easing, transform-origin: bottom
+.chart-bar-fill {
+  width: 100%;
+  min-height: 3px;
+  background: var(--accent);
+  border-radius: 3px 3px 0 0;
+  transform-origin: bottom center;
+  transition: transform 280ms $ease-expo;
+
+  @starting-style { transform: scaleY(0); }
+
+  &--status    { opacity: .75; }
+  &--coll      { background: oklch(0.58 0.18 152); }
+  &--workshop  { background: oklch(0.62 0.18 72); }
+}
+
+// Stagger: each .chart-col nth-child delays its bar
+@for $i from 1 through 12 {
+  .chart-col:nth-child(#{$i}) .chart-bar-fill {
+    transition-delay: #{($i - 1) * 25}ms;
+  }
+}
+
+.chart-label {
+  font-size: .64rem;
+  color: var(--ink);
+  opacity: .4;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  flex-shrink: 0;
+
+  &--xs { font-size: .58rem; }
+}
+
+// ── Tables ────────────────────────────────────────────────────
+.acc-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--r-md);
+  border: 1px solid var(--hairline);
+}
+
+.acc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .82rem;
+
+  th {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: .72rem;
+    font-weight: 600;
+    color: var(--ink);
+    opacity: .5;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 1px solid var(--hairline);
+    white-space: nowrap;
+    background: var(--surface);
+  }
+
+  td {
+    padding: 11px 14px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--hairline);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  tr:hover td { background: var(--bg-2); }
+
+  .col-r    { text-align: right; }
+  .col-muted { opacity: .5; font-size: .78rem; }
+  .mono     { font-family: var(--font-mono); }
+}
+
+// ── Conversion pill ───────────────────────────────────────────
+.conv-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: .72rem;
+  font-weight: 500;
+}
+
+// ── Aging badges ──────────────────────────────────────────────
+.aging-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  font-size: .72rem;
+  font-weight: 600;
+
+  &.ag--ok    { background: oklch(0.94 0.05 152); color: oklch(0.38 0.14 152); }
+  &.ag--warn  { background: oklch(0.97 0.04 80);  color: oklch(0.42 0.12 60); }
+  &.ag--alert { background: oklch(0.95 0.06 55);  color: oklch(0.38 0.15 55); }
+  &.ag--crit  { background: oklch(0.96 0.04 15);  color: oklch(0.38 0.18 15); }
+}
+
+// ── Fintech tasa bar ──────────────────────────────────────────
+.tasa-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.tasa-val {
+  font-family: var(--font-mono);
+  font-size: .78rem;
+  min-width: 42px;
+  text-align: right;
+  &--ok           { color: oklch(0.48 0.17 152); font-weight: 600; }
+  &--workshop-ok  { color: oklch(0.44 0.16 72);  font-weight: 600; }
+}
+
+.tasa-bar {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: .55;
+  max-width: 72px;
+  min-width: 2px;
+  flex-shrink: 0;
+  &--coll     { background: oklch(0.58 0.18 152); opacity: .65; }
+  &--workshop { background: oklch(0.62 0.18 72);  opacity: .65; }
+}
+
+// ── Loading / error ───────────────────────────────────────────
+.tab-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 0;
+  color: var(--ink);
+  opacity: .5;
+  font-size: .83rem;
+}
+
+.tab-error {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: oklch(0.96 0.03 15);
+  color: oklch(0.40 0.18 15);
+  border-radius: var(--r-sm);
+  font-size: .83rem;
+}
+
+.btn-retry {
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: inherit;
+  font-size: .78rem;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.spinner-sm {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid transparent;
+  border-top-color: currentColor;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Chart empty state ─────────────────────────────────────────
+.chart-empty {
+  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: .78rem;
+  color: var(--ink);
+  opacity: .35;
+  border: 1px dashed var(--hairline);
+  border-radius: var(--r-sm);
+  margin-bottom: 4px;
+
+  &--sm { height: 140px; }
+}
+
+// ── Table empty row ───────────────────────────────────────────
+.col-empty {
+  text-align: center !important;
+  padding: 24px 14px !important;
+  opacity: .4;
+  font-size: .80rem;
+}
+
+// ── prefers-reduced-motion ────────────────────────────────────
+// Disable all motion — states remain visible, layouts don't break
+@media (prefers-reduced-motion: reduce) {
+  .an-kpi-card,
+  .an-alert,
+  .an-tab-content,
+  .chart-bar-fill,
+  .kpi-value,
+  .an-projection,
+  .export-icon-wrap,
+  .preset-btn,
+  .tab-btn,
+  .btn-export-sm {
+    transition-duration: 0.01ms !important;
+    transition-delay:    0ms !important;
+    animation-duration:  0.01ms !important;
+  }
+}

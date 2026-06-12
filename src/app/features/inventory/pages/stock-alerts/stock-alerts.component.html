@@ -1,0 +1,216 @@
+<div class="alerts-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="alerts-header">
+    <div class="alerts-header-left">
+      <h1 class="alerts-title">Alertas de stock</h1>
+      @if (!loading()) {
+        <span class="alerts-sub">
+          {{ totalAffected() }} repuesto{{ totalAffected() !== 1 ? 's' : '' }} bajo el mínimo
+        </span>
+      }
+    </div>
+  </header>
+
+  <!-- ── KPI strip ──────────────────────────────────────────────────── -->
+  @if (!loading() && !error()) {
+    <div class="kpi-strip">
+      <div class="kpi-card kpi-card--danger">
+        <span class="kpi-value">{{ criticalCount() }}</span>
+        <span class="kpi-label">Sin stock</span>
+      </div>
+      <div class="kpi-card kpi-card--warn">
+        <span class="kpi-value">{{ totalAffected() - criticalCount() }}</span>
+        <span class="kpi-label">Por debajo del mínimo</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-value">{{ categoriesCount() }}</span>
+        <span class="kpi-label">Categorías afectadas</span>
+      </div>
+    </div>
+  }
+
+  <!-- ── Category chips ─────────────────────────────────────────────── -->
+  @if (!loading() && alerts().length > 0) {
+    <div class="filter-bar" role="group" aria-label="Filtrar por categoría">
+      @for (opt of CATEGORY_FILTER_OPTIONS; track opt.category) {
+        <button
+          class="chip"
+          [class.chip--active]="selectedCat() === opt.category"
+          type="button"
+          (click)="selectCat(opt.category)">
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Error ──────────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- ── Loading skeleton ───────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="table-wrap" aria-busy="true">
+      <table class="alerts-table">
+        <thead>
+          <tr>
+            <th>SKU</th><th>Repuesto</th><th>Categoría</th>
+            <th class="col-num">Stock actual</th>
+            <th class="col-num">Mínimo</th>
+            <th class="col-num">Faltante</th>
+            <th>Severidad</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of [1,2,3,4,5]; track s) {
+            <tr class="skeleton-row">
+              <td><span class="skel skel--sku"></span></td>
+              <td><span class="skel skel--name"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Empty state ────────────────────────────────────────────────── -->
+  @if (!loading() && !error() && alerts().length === 0) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+      </div>
+      <p class="empty-title">Todo el stock está al día</p>
+      <p class="empty-sub">No hay repuestos por debajo del nivel mínimo.</p>
+    </div>
+  }
+
+  <!-- ── Filtered empty ─────────────────────────────────────────────── -->
+  @if (!loading() && !error() && alerts().length > 0 && filtered().length === 0) {
+    <div class="empty-state" role="status">
+      <p class="empty-title">Sin alertas en esta categoría</p>
+    </div>
+  }
+
+  <!-- ── Table ──────────────────────────────────────────────────────── -->
+  @if (!loading() && !error() && filtered().length > 0) {
+    <div class="table-wrap">
+      <table class="alerts-table">
+        <thead>
+          <tr>
+            <th scope="col">SKU</th>
+            <th scope="col">Repuesto</th>
+            <th scope="col">Categoría</th>
+            <th scope="col" class="col-num">Stock actual</th>
+            <th scope="col" class="col-num">Mínimo</th>
+            <th scope="col" class="col-num">Faltante</th>
+            <th scope="col">Severidad</th>
+            <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of filtered(); track item.repuesto.id; let i = $index) {
+            <tr class="alert-row" [attr.data-severity]="severityClass(item)" [style.--idx]="animIdx(i)">
+
+              <!-- SKU -->
+              <td class="cell-sku">{{ item.repuesto.sku }}</td>
+
+              <!-- Nombre / Marca -->
+              <td class="cell-name">
+                <span class="name-primary">{{ item.repuesto.name }}</span>
+                @if (item.repuesto.brand) {
+                  <span class="name-brand">{{ item.repuesto.brand }}</span>
+                }
+              </td>
+
+              <!-- Categoría -->
+              <td>
+                <span class="cat-badge" [attr.data-color]="CATEGORY_COLOR[item.repuesto.category]">
+                  {{ CATEGORY_LABEL[item.repuesto.category] }}
+                </span>
+              </td>
+
+              <!-- Stock actual -->
+              <td class="cell-num">
+                <span class="stock-val" [class.stock-val--zero]="item.totalAvailable === 0">
+                  {{ item.totalAvailable }}
+                </span>
+                <span class="stock-uom">{{ UOM_LABEL[item.repuesto.unitOfMeasure] }}</span>
+              </td>
+
+              <!-- Mínimo -->
+              <td class="cell-num">
+                <span class="min-val">{{ item.repuesto.minimumStock }}</span>
+              </td>
+
+              <!-- Faltante -->
+              <td class="cell-num">
+                <span class="shortage-val">+{{ shortage(item) }}</span>
+              </td>
+
+              <!-- Severidad -->
+              <td>
+                <span class="severity-badge" [attr.data-sev]="severityClass(item)">
+                  @if (severityClass(item) === 'critical') { Sin stock }
+                  @else if (severityClass(item) === 'high') { Crítico }
+                  @else { Bajo mínimo }
+                </span>
+              </td>
+
+              <!-- Acciones -->
+              <td class="cell-actions">
+                <button class="btn-oc" type="button" title="Crear orden de compra" disabled
+                        [attr.aria-label]="'Crear OC para ' + item.repuesto.name + ' (próximamente)'">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Crear OC
+                </button>
+              </td>
+
+            </tr>
+
+            <!-- Stock por almacén (detalle inline) -->
+            @if (item.stock.length > 0) {
+              <tr class="wh-row">
+                <td colspan="8" class="wh-cell">
+                  <div class="wh-detail">
+                    @for (lvl of item.stock; track lvl.warehouseId) {
+                      <span class="wh-chip">
+                        <span class="wh-chip-name">{{ warehouseMap().get(lvl.warehouseId) ?? 'Almacén' }}</span>
+                        <span class="wh-chip-qty" [class.wh-chip-qty--zero]="lvl.quantityAvailable === 0">
+                          {{ lvl.quantityAvailable }} disp.
+                        </span>
+                      </span>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>

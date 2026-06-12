@@ -1,0 +1,199 @@
+/* ── KPI strip ────────────────────────────────────────────── */
+.kpi-strip {
+  display: flex; align-items: center; gap: 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-md); padding: 14px 20px; margin-bottom: 16px;
+}
+.kpi-item   { display: flex; align-items: baseline; gap: 6px; padding-inline: 12px; &:first-child { padding-left: 0; } }
+.kpi-val    { font-family: var(--font-mono); font-size: 22px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.kpi-label  { font-size: 12px; color: var(--ink-3); }
+.kpi-div    { width: 1px; height: 24px; background: var(--border); flex-shrink: 0; }
+.kpi-val--new       { color: var(--accent); }
+.kpi-val--qualified { color: var(--success); }
+.kpi-val--converted { color: oklch(44% 0.15 280); }
+
+.btn-new {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border: none; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: filter 120ms, transform 100ms;
+  &:hover { filter: brightness(1.1); }
+  &:active { transform: scale(0.98); }
+}
+
+/* ── Filter row ───────────────────────────────────────────── */
+.filter-row {
+  display: flex; align-items: center; gap: 12px;
+  flex-wrap: wrap; margin-bottom: 14px;
+}
+
+.chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 11px; border: 1px solid var(--border); border-radius: var(--r-pill);
+  background: var(--surface); color: var(--ink-3); font: inherit; font-size: 12.5px;
+  cursor: pointer; white-space: nowrap; transition: all 120ms;
+  &:hover { border-color: var(--accent); color: var(--accent); }
+  &--active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+}
+
+.chip-count {
+  font-size: 11px; font-weight: 700;
+  background: rgba(255,255,255,.25); border-radius: 10px;
+  padding: 0 5px;
+  .chip:not(.chip--active) & { background: var(--bg-2); color: var(--ink-2); }
+}
+
+.search-wrap {
+  position: relative; margin-left: auto;
+  @media (max-width: 600px) { margin-left: 0; width: 100%; }
+}
+.search-icon  { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+.search-input {
+  padding: 7px 12px 7px 32px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink); font: inherit; font-size: 13px;
+  width: 220px; transition: border-color 120ms, box-shadow 120ms;
+  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+}
+
+.error-banner {
+  padding: 10px 14px; border-radius: var(--r-sm); margin-bottom: 12px;
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 20%, transparent);
+  color: var(--danger); font-size: 13px;
+}
+
+/* ── Table ────────────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; border-radius: var(--r-md); border: 1px solid var(--border); }
+
+.lead-table {
+  width: 100%; border-collapse: collapse;
+  thead tr { background: var(--bg-2); border-bottom: 2px solid var(--border); }
+  th { text-align: left; padding: 9px 12px; font-size: 11px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid var(--hairline); &:last-child { border-bottom: none; } }
+  td { padding: 11px 12px; vertical-align: middle; }
+}
+
+.lead-row {
+  transition: background 100ms;
+  animation: row-enter 160ms cubic-bezier(0.16,1,0.3,1) both;
+  animation-delay: calc(var(--idx, 0) * 20ms);
+  &:hover { background: var(--bg-2); }
+  &--disqualified { opacity: 0.5; }
+}
+
+/* ── Source badges ────────────────────────────────────────── */
+.source-badge {
+  display: inline-block; padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 700;
+  &--web      { background: color-mix(in oklab, #6366f1 12%, var(--surface)); color: #4f46e5; }
+  &--whatsapp { background: color-mix(in oklab, #22c55e 12%, var(--surface)); color: #16a34a; }
+  &--facebook { background: color-mix(in oklab, #3b82f6 12%, var(--surface)); color: #1d4ed8; }
+  &--field    { background: color-mix(in oklab, #f59e0b 12%, var(--surface)); color: #b45309; }
+  &--referral { background: color-mix(in oklab, #ec4899 12%, var(--surface)); color: #be185d; }
+}
+
+/* ── Status badges ────────────────────────────────────────── */
+.status-badge {
+  display: inline-block; padding: 3px 9px; border-radius: var(--r-pill);
+  font-size: 11px; font-weight: 700;
+  &--new          { background: color-mix(in oklab, var(--accent) 12%, var(--surface)); color: var(--accent); }
+  &--contacted    { background: color-mix(in oklab, #f59e0b 12%, var(--surface)); color: #b45309; }
+  &--qualified    { background: color-mix(in oklab, var(--success) 12%, var(--surface)); color: oklch(38% 0.14 152); }
+  &--disqualified { background: color-mix(in oklab, var(--danger) 10%, var(--surface)); color: var(--danger); }
+  &--converted    { background: color-mix(in oklab, oklch(44% 0.15 280) 12%, var(--surface)); color: oklch(38% 0.15 280); }
+}
+
+.cell-model    { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.cell-budget   { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-2); }
+.cell-customer { font-size: 12.5px; color: var(--ink-2); }
+.cell-date     { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
+.cell-actions  { text-align: right; }
+.budget-range  { white-space: nowrap; }
+.customer-link { color: var(--accent-ink); font-weight: 500; }
+.text-muted    { color: var(--ink-3); font-size: 12.5px; }
+
+/* ── Action buttons ───────────────────────────────────────── */
+.action-group { display: flex; align-items: center; gap: 4px; justify-content: flex-end; }
+
+.act-btn {
+  padding: 4px 10px; border-radius: var(--r-sm); font: inherit; font-size: 11.5px; font-weight: 600;
+  cursor: pointer; transition: all 100ms; min-height: 28px; border: 1px solid transparent;
+  &--contact  { background: color-mix(in oklab, var(--accent) 10%, var(--surface)); color: var(--accent); border-color: color-mix(in oklab, var(--accent) 25%, transparent); &:hover { background: var(--accent); color: #fff; } }
+  &--qualify  { background: color-mix(in oklab, var(--success) 10%, var(--surface)); color: oklch(38% 0.14 152); border-color: color-mix(in oklab, var(--success) 25%, transparent); &:hover { background: var(--success); color: #fff; } }
+  &--convert  { background: color-mix(in oklab, oklch(44% 0.15 280) 10%, var(--surface)); color: oklch(38% 0.15 280); border-color: color-mix(in oklab, oklch(44% 0.15 280) 25%, transparent); &:hover { background: oklch(44% 0.15 280); color: #fff; } }
+  &--discard  { background: transparent; color: var(--ink-3); border-color: var(--border); font-size: 13px; padding: 4px 8px; &:hover { background: color-mix(in oklab, var(--danger) 10%, var(--surface)); color: var(--danger); border-color: var(--danger); } }
+}
+
+/* ── Skeleton / empty ─────────────────────────────────────── */
+.skel-row td { padding: 12px; }
+.skel {
+  display: block; border-radius: 4px;
+  background: linear-gradient(90deg, var(--bg-2) 25%, color-mix(in oklab, var(--bg-2) 60%, var(--surface)) 50%, var(--bg-2) 100%);
+  background-size: 200% 100%; animation: shimmer 1.4s linear infinite;
+  &--name   { width: 130px; height: 13px; }
+  &--badge  { width: 70px; height: 19px; border-radius: var(--r-pill); }
+  &--amount { width: 80px; height: 13px; }
+  &--date   { width: 55px; height: 12px; }
+}
+
+.empty-state { display: flex; align-items: center; gap: 8px; padding: 24px; font-size: 13.5px; color: var(--ink-3); }
+.link-btn { background: none; border: none; color: var(--accent-ink); font: inherit; font-size: 13px; cursor: pointer; padding: 0; &:hover { text-decoration: underline; } }
+
+/* ── Spinner ──────────────────────────────────────────────── */
+.spinner {
+  display: inline-block; width: 14px; height: 14px;
+  border: 2px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  border-top-color: var(--accent); border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  &--white { border-color: rgba(255,255,255,.3); border-top-color: #fff; }
+}
+
+/* ── Dialog ───────────────────────────────────────────────── */
+.dialog-backdrop {
+  position: fixed; inset: 0; background: rgba(10,10,10,0.45); z-index: 200;
+}
+.side-dialog {
+  position: fixed; top: 0; right: 0; bottom: 0; width: min(400px, 100vw);
+  background: var(--surface); box-shadow: -8px 0 32px rgba(10,10,10,0.12);
+  z-index: 201; display: flex; flex-direction: column;
+  transform: translateX(100%); transition: transform 300ms cubic-bezier(0.16,1,0.3,1);
+  &--open { transform: translateX(0); }
+
+  @starting-style { transform: translateX(100%); }
+}
+.dialog-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 22px 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.dialog-title  { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0; }
+.dialog-close  { width: 30px; height: 30px; border: none; background: var(--bg-2); border-radius: 50%; color: var(--ink-3); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 120ms; &:hover { background: var(--border); color: var(--ink); } }
+.dialog-body   { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; }
+.dialog-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid var(--border); flex-shrink: 0; }
+.field         { display: flex; flex-direction: column; gap: 5px; }
+.field-row     { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field-label   { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+.req           { color: var(--danger); }
+.field-input, .field-select, .field-textarea {
+  padding: 8px 11px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  font: inherit; font-size: 13.5px; color: var(--ink); background: var(--surface);
+  transition: border-color 120ms; width: 100%; box-sizing: border-box;
+  &:focus { outline: none; border-color: var(--accent); }
+}
+.field-select  { appearance: none; cursor: pointer; background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238A8A85' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px; }
+.field-textarea { resize: vertical; min-height: 60px; }
+.form-error    { padding: 10px 12px; border-radius: var(--r-sm); background: color-mix(in oklab, var(--danger) 10%, var(--surface)); border: 1px solid color-mix(in oklab, var(--danger) 20%, transparent); color: var(--danger); font-size: 13px; }
+.btn-cancel    { padding: 8px 16px; border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 13.5px; cursor: pointer; &:hover:not(:disabled) { background: var(--bg-2); } &:disabled { opacity: 0.5; cursor: not-allowed; } }
+.btn-submit    { display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border: none; border-radius: var(--r-sm); background: var(--accent); color: #fff; font: inherit; font-size: 13.5px; font-weight: 600; cursor: pointer; transition: filter 120ms; &:hover:not(:disabled) { filter: brightness(1.1); } &:disabled { opacity: 0.6; cursor: not-allowed; } }
+
+/* ── Animations ───────────────────────────────────────────── */
+@keyframes row-enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer   { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@keyframes spin      { to { transform: rotate(360deg); } }
+
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .lead-row { animation: none; }
+  .skel     { animation: none; background: var(--bg-2); }
+  .side-dialog { transition: none; }
+  .spinner  { animation: none; }
+}

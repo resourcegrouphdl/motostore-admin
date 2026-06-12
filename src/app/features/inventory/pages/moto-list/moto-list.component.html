@@ -1,0 +1,468 @@
+<div class="inv-page">
+
+  <!-- ── Page header ───────────────────────────────────────────── -->
+  <header class="inv-header">
+    <div class="inv-header-left">
+      <h1 class="inv-title">Inventario</h1>
+      @if (!loading()) {
+        <span class="inv-count">{{ totalCount() }} unidades</span>
+      }
+    </div>
+    <button class="btn-add" type="button" aria-label="Registrar nueva moto" (click)="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Registrar moto
+    </button>
+  </header>
+
+  <!-- ── Filter chips ──────────────────────────────────────────── -->
+  <div class="filter-bar" role="group" aria-label="Filtrar por estado">
+    @for (opt of FILTER_OPTIONS; track opt.status) {
+      <button class="chip" [class.chip--active]="selectedStatus() === opt.status"
+              type="button" (click)="selectFilter(opt.status)"
+              [attr.aria-pressed]="selectedStatus() === opt.status">
+        {{ opt.label }}
+        @if (opt.status && statsMap()[opt.status]) {
+          <span class="chip-count">{{ statsMap()[opt.status] }}</span>
+        }
+        @if (!opt.status && totalCount() > 0) {
+          <span class="chip-count">{{ totalCount() }}</span>
+        }
+      </button>
+    }
+  </div>
+
+  <!-- ── Error ─────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">{{ error() }}</div>
+  }
+
+  <!-- ── Loading skeleton ──────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="table-wrap" aria-busy="true">
+      <table class="inv-table">
+        <thead><tr>
+          <th>VIN</th><th>Marca / Modelo</th><th>Año</th>
+          <th>Precio lista</th><th>Estado</th><th></th>
+        </tr></thead>
+        <tbody>
+          @for (s of [1,2,3,4,5]; track s) {
+            <tr class="skeleton-row">
+              <td><span class="skel skel--vin"></span></td>
+              <td><span class="skel skel--text"></span></td>
+              <td><span class="skel skel--sm"></span></td>
+              <td><span class="skel skel--price"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Empty state ───────────────────────────────────────────── -->
+  @if (!loading() && filteredMotos().length === 0 && !error()) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+        </svg>
+      </div>
+      <p class="empty-title">
+        {{ selectedStatus() ? 'Sin motos con ese estado' : 'El inventario está vacío' }}
+      </p>
+      <p class="empty-sub">
+        {{ selectedStatus() ? 'Prueba con otro filtro.' : 'Registra la primera moto para empezar.' }}
+      </p>
+    </div>
+  }
+
+  <!-- ── Table ─────────────────────────────────────────────────── -->
+  @if (!loading() && filteredMotos().length > 0) {
+    <div class="table-wrap">
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th scope="col">VIN</th>
+            <th scope="col">Marca / Modelo</th>
+            <th scope="col">Año</th>
+            <th scope="col" class="col-price">Precio lista</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (moto of filteredMotos(); track moto.vin; let i = $index) {
+            <tr class="moto-row" [style.--idx]="animIdx(i)"
+                [class.moto-row--selected]="panelMoto()?.id === moto.id">
+
+              <td class="cell-vin">{{ moto.vin }}</td>
+
+              <td class="cell-model">
+                <span class="model-brand">{{ moto.brand }}</span>
+                <span class="model-name">{{ moto.model }}</span>
+                @if (moto.color) {
+                  <span class="model-color">{{ moto.color }}</span>
+                }
+              </td>
+
+              <td class="cell-year">{{ moto.year }}</td>
+
+              <td class="cell-price">
+                @if (moto.listPrice) {
+                  <span class="price-value">S/ {{ moto.listPrice | number:'1.0-0' }}</span>
+                } @else {
+                  <span class="no-value">—</span>
+                }
+              </td>
+
+              <td class="cell-status">
+                <span class="status-badge" [attr.data-color]="STATUS_COLOR[moto.status]">
+                  <span class="status-dot" aria-hidden="true"></span>
+                  {{ STATUS_LABEL[moto.status] }}
+                </span>
+              </td>
+
+              <td class="cell-actions">
+                <button class="action-btn" type="button" title="Ver detalle"
+                        (click)="openDetail(moto)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>
+
+<!-- ── Detail panel overlay ──────────────────────────────────────── -->
+<div class="panel-overlay" [class.panel-overlay--open]="panelOpen()"
+     (click)="closePanel()" aria-hidden="true"></div>
+
+<!-- ── Detail panel ──────────────────────────────────────────────── -->
+@if (panelMoto()) {
+  <aside class="detail-panel" [class.detail-panel--open]="panelOpen()"
+         role="dialog" aria-label="Detalle de moto">
+
+    <!-- Header -->
+    <div class="dp-header">
+      <div>
+        <p class="dp-vin">{{ panelMoto()!.vin }}</p>
+        <h2 class="dp-title">{{ panelMoto()!.brand }} {{ panelMoto()!.model }}</h2>
+        <span class="status-badge" [attr.data-color]="STATUS_COLOR[panelMoto()!.status]">
+          <span class="status-dot" aria-hidden="true"></span>
+          {{ STATUS_LABEL[panelMoto()!.status] }}
+        </span>
+      </div>
+      <button class="dp-close" type="button" (click)="closePanel()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Info grid -->
+    <div class="dp-info">
+      <div class="dp-row"><span class="dp-key">Año</span><span>{{ panelMoto()!.year }}</span></div>
+      @if (panelMoto()!.color) {
+        <div class="dp-row"><span class="dp-key">Color</span><span>{{ panelMoto()!.color }}</span></div>
+      }
+      <div class="dp-row">
+        <span class="dp-key">Modo ingreso</span>
+        <span>{{ ACQUISITION_LABELS[panelMoto()!.acquisitionMode] }}</span>
+      </div>
+      @if (panelMoto()!.listPrice) {
+        <div class="dp-row">
+          <span class="dp-key">Precio lista</span>
+          <span>S/ {{ panelMoto()!.listPrice | number:'1.0-0' }}</span>
+        </div>
+      }
+      @if (panelMoto()!.minimumPrice) {
+        <div class="dp-row">
+          <span class="dp-key">Precio mínimo</span>
+          <span>S/ {{ panelMoto()!.minimumPrice | number:'1.0-0' }}</span>
+        </div>
+      }
+      @if (panelMoto()!.notes) {
+        <div class="dp-row dp-row--full">
+          <span class="dp-key">Notas</span>
+          <span class="dp-notes">{{ panelMoto()!.notes }}</span>
+        </div>
+      }
+      <div class="dp-row">
+        <span class="dp-key">Registrada</span>
+        <span>{{ panelMoto()!.createdAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+      <div class="dp-row">
+        <span class="dp-key">Actualizada</span>
+        <span>{{ panelMoto()!.updatedAt | date:'dd/MM/yyyy HH:mm' }}</span>
+      </div>
+    </div>
+
+    @if (statusError()) {
+      <div class="dp-error" role="alert">{{ statusError() }}</div>
+    }
+
+    <!-- ── Acciones de estado ──────────────────────────────────── -->
+    @if (allowedStatuses().length > 0) {
+      <div class="dp-section">
+        <p class="dp-section-title">Cambiar estado</p>
+        <div class="status-actions">
+          @for (s of allowedStatuses(); track s) {
+            <button class="btn-status" type="button"
+                    [class.btn-status--loading]="statusChanging()"
+                    [attr.data-color]="STATUS_COLOR[s]"
+                    [disabled]="statusChanging()"
+                    (click)="changeStatus(s)">
+              {{ STATUS_LABEL[s] }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <!-- ── Reservar ───────────────────────────────────────────── -->
+    @if (panelMoto()!.status === 'ON_DISPLAY' || panelMoto()!.status === 'IN_WAREHOUSE') {
+      <div class="dp-section">
+        <p class="dp-section-title">Reservar para cliente</p>
+        @if (!reserveOpen()) {
+          <button class="btn-action" type="button" (click)="openReserve()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            Reservar
+          </button>
+        } @else {
+          <div class="inline-form">
+            <div class="field">
+              <label class="field-label" for="rf-by">Nombre / cliente</label>
+              <input id="rf-by" class="field-input" type="text" placeholder="Juan Pérez"
+                     [ngModel]="reservedBy()" (ngModelChange)="reservedBy.set($event)">
+            </div>
+            <div class="field">
+              <label class="field-label" for="rf-hours">Hold (horas)</label>
+              <input id="rf-hours" class="field-input" type="number" min="1" max="720"
+                     [ngModel]="holdHours()" (ngModelChange)="holdHours.set($event)">
+            </div>
+            @if (reserveError()) {
+              <div class="form-error">{{ reserveError() }}</div>
+            }
+            <div class="inline-form-footer">
+              <button class="btn-cancel-sm" type="button" (click)="reserveOpen.set(false)">
+                Cancelar
+              </button>
+              <button class="btn-submit-sm" type="button"
+                      [disabled]="!reservedBy().trim() || reserveSubmitting()"
+                      (click)="submitReserve()">
+                {{ reserveSubmitting() ? 'Reservando…' : 'Confirmar reserva' }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Liberar reserva ────────────────────────────────────── -->
+    @if (panelMoto()!.status === 'RESERVED') {
+      <div class="dp-section">
+        <p class="dp-section-title">Reserva activa</p>
+        <button class="btn-action btn-action--danger" type="button"
+                [disabled]="statusChanging()" (click)="releaseHold()">
+          Liberar reserva
+        </button>
+      </div>
+    }
+
+    <!-- ── Traslado ───────────────────────────────────────────── -->
+    @if (panelMoto()!.status !== 'SOLD' && panelMoto()!.status !== 'IN_TRANSIT') {
+      <div class="dp-section">
+        <p class="dp-section-title">Traslado entre almacenes</p>
+        @if (!transferOpen()) {
+          <button class="btn-action" type="button" (click)="openTransfer()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+            Iniciar traslado
+          </button>
+        } @else {
+          <div class="inline-form">
+            <div class="field">
+              <label class="field-label" for="tf-to">Almacén destino</label>
+              <select id="tf-to" class="field-select"
+                      [ngModel]="transferToWhId()" (ngModelChange)="transferToWhId.set($event)">
+                <option value="">Seleccionar almacén…</option>
+                @for (wh of otherWarehouses(); track wh.id) {
+                  <option [value]="wh.id">{{ wh.name }}</option>
+                }
+              </select>
+            </div>
+            <div class="field">
+              <label class="field-label" for="tf-notes">Notas (opcional)</label>
+              <input id="tf-notes" class="field-input" type="text"
+                     placeholder="Motivo del traslado…"
+                     [ngModel]="transferNotes()" (ngModelChange)="transferNotes.set($event)">
+            </div>
+            @if (transferError()) {
+              <div class="form-error">{{ transferError() }}</div>
+            }
+            <div class="inline-form-footer">
+              <button class="btn-cancel-sm" type="button" (click)="transferOpen.set(false)">
+                Cancelar
+              </button>
+              <button class="btn-submit-sm" type="button"
+                      [disabled]="!transferToWhId() || transferSubmitting()"
+                      (click)="submitTransfer()">
+                {{ transferSubmitting() ? 'Iniciando…' : 'Iniciar traslado' }}
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ── Confirmar recepción ────────────────────────────────── -->
+    @if (panelMoto()!.status === 'IN_TRANSIT') {
+      <div class="dp-section">
+        <p class="dp-section-title">En tránsito</p>
+        <p class="dp-hint">Esta moto está siendo trasladada. Confirma la recepción en el almacén destino.</p>
+        <button class="btn-action" type="button"
+                [disabled]="statusChanging()" (click)="confirmTransfer()">
+          Confirmar recepción
+        </button>
+      </div>
+    }
+
+  </aside>
+}
+
+<!-- ── Create dialog backdrop ────────────────────────────────────── -->
+@if (createOpen()) {
+  <div class="dialog-backdrop" (click)="closeCreate()" aria-hidden="true"></div>
+}
+
+<!-- ── Create dialog ─────────────────────────────────────────────── -->
+<aside class="create-dialog" [class.create-dialog--open]="createOpen()"
+       role="dialog" aria-modal="true" aria-label="Registrar nueva moto">
+
+  <div class="dialog-header">
+    <h2 class="dialog-title">Registrar moto</h2>
+    <button class="dialog-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <form class="dialog-body" (ngSubmit)="submitCreate()" #createFormRef="ngForm" novalidate>
+
+    <div class="field">
+      <label class="field-label" for="cf-vin">VIN <span class="field-req">*</span></label>
+      <input id="cf-vin" class="field-input" type="text" name="vin"
+             placeholder="9BWZZZ377VT004251" maxlength="17" autocomplete="off"
+             [(ngModel)]="createForm.vin" required
+             [class.field-input--error]="vinField.invalid && vinField.touched"
+             #vinField="ngModel">
+      <span class="field-hint">17 caracteres — se convierte a mayúsculas</span>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cf-brand">Marca <span class="field-req">*</span></label>
+        <input id="cf-brand" class="field-input" type="text" name="brand"
+               placeholder="Honda, Yamaha…" autocomplete="off"
+               [(ngModel)]="createForm.brand" required
+               #brandField="ngModel"
+               [class.field-input--error]="brandField.invalid && brandField.touched">
+      </div>
+      <div class="field">
+        <label class="field-label" for="cf-model">Modelo <span class="field-req">*</span></label>
+        <input id="cf-model" class="field-input" type="text" name="model"
+               placeholder="CB 300R, FZ25…" autocomplete="off"
+               [(ngModel)]="createForm.model" required
+               #modelField="ngModel"
+               [class.field-input--error]="modelField.invalid && modelField.touched">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cf-year">Año <span class="field-req">*</span></label>
+        <input id="cf-year" class="field-input" type="number" name="year"
+               [min]="2000" [max]="currentYear + 1"
+               [(ngModel)]="createForm.year" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="cf-color">Color</label>
+        <input id="cf-color" class="field-input" type="text" name="color"
+               placeholder="Negro Mate, Rojo…" [(ngModel)]="createForm.color">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cf-mode">Modo de ingreso <span class="field-req">*</span></label>
+      <select id="cf-mode" class="field-select" name="acquisitionMode"
+              [(ngModel)]="createForm.acquisitionMode" required>
+        @for (mode of ALL_ACQUISITION_MODES; track mode) {
+          <option [value]="mode">{{ ACQUISITION_LABELS[mode] }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cf-price">Precio lista (S/)</label>
+        <input id="cf-price" class="field-input" type="number" name="listPrice"
+               min="0" step="10" placeholder="0" [(ngModel)]="createForm.listPrice">
+      </div>
+      <div class="field">
+        <label class="field-label" for="cf-min-price">Precio mínimo (S/)</label>
+        <input id="cf-min-price" class="field-input" type="number" name="minimumPrice"
+               min="0" step="10" placeholder="0" [(ngModel)]="createForm.minimumPrice">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cf-notes">Notas</label>
+      <textarea id="cf-notes" class="field-textarea" name="notes" rows="2"
+                placeholder="Observaciones, condición, origen…"
+                [(ngModel)]="createForm.notes"></textarea>
+    </div>
+
+    @if (createError()) {
+      <div class="form-error" role="alert">{{ createError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeCreate()"
+              [disabled]="createSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit"
+              [disabled]="createFormRef.invalid || createSubmitting()">
+        @if (createSubmitting()) {
+          <span class="spinner" aria-hidden="true"></span>
+          Registrando…
+        } @else {
+          Registrar moto
+        }
+      </button>
+    </div>
+
+  </form>
+</aside>

@@ -1,0 +1,187 @@
+<div class="aging-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="aging-header">
+    <div>
+      <h1 class="aging-title">Antigüedad de inventario</h1>
+      @if (!loading()) {
+        <span class="aging-sub">
+          {{ rows().length }} motos activas · promedio {{ avgDays() }} días · máximo {{ maxDays() }} días
+        </span>
+      }
+    </div>
+  </header>
+
+  <!-- ── Error ──────────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- ── Bucket KPI strip ───────────────────────────────────────────── -->
+  @if (!loading() && !error()) {
+    <div class="bucket-strip" role="group" aria-label="Filtrar por rango de días">
+      <!-- All -->
+      <button
+        class="bucket-card"
+        [class.bucket-card--active]="selectedBucket() === null"
+        type="button"
+        (click)="selectBucket(null)">
+        <span class="bucket-count">{{ rows().length }}</span>
+        <span class="bucket-label">Todas</span>
+      </button>
+
+      @for (b of BUCKETS; track b) {
+        <button
+          class="bucket-card"
+          [class.bucket-card--active]="selectedBucket() === b"
+          [attr.data-level]="bucketClass(b)"
+          type="button"
+          (click)="selectBucket(b)"
+          [attr.aria-pressed]="selectedBucket() === b">
+          <span class="bucket-count">{{ bucketCounts()[b] }}</span>
+          <span class="bucket-label">{{ BUCKET_LABEL[b] }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Loading skeleton ───────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="table-wrap" aria-busy="true">
+      <table class="aging-table">
+        <thead>
+          <tr>
+            <th>VIN</th><th>Moto</th><th>Año</th>
+            <th>Estado</th><th>Ingreso</th><th class="col-num col-sortable">Días</th>
+            <th>Antigüedad</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (s of [1,2,3,4,5,6]; track s) {
+            <tr class="skeleton-row">
+              <td><span class="skel skel--vin"></span></td>
+              <td><span class="skel skel--name"></span></td>
+              <td><span class="skel skel--yr"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td><span class="skel skel--date"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--bar"></span></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Empty state ────────────────────────────────────────────────── -->
+  @if (!loading() && !error() && rows().length === 0) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
+      </div>
+      <p class="empty-title">Sin motos en inventario activo</p>
+      <p class="empty-sub">No hay motos activas para calcular antigüedad.</p>
+    </div>
+  }
+
+  <!-- ── Empty filtered ─────────────────────────────────────────────── -->
+  @if (!loading() && !error() && rows().length > 0 && filtered().length === 0) {
+    <div class="empty-state" role="status">
+      <p class="empty-title">Sin motos en este rango</p>
+    </div>
+  }
+
+  <!-- ── Table ──────────────────────────────────────────────────────── -->
+  @if (!loading() && !error() && filtered().length > 0) {
+    <div class="table-wrap">
+      <table class="aging-table">
+        <thead>
+          <tr>
+            <th scope="col">VIN</th>
+            <th scope="col" class="col-sortable" (click)="sort('brand')"
+                [attr.aria-sort]="sortField() === 'brand' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Moto
+              <span class="sort-icon" [attr.data-state]="sortIcon('brand')"></span>
+            </th>
+            <th scope="col">Año</th>
+            <th scope="col" class="col-sortable" (click)="sort('status')"
+                [attr.aria-sort]="sortField() === 'status' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Estado
+              <span class="sort-icon" [attr.data-state]="sortIcon('status')"></span>
+            </th>
+            <th scope="col">Modo ingreso</th>
+            <th scope="col" class="col-num col-sortable" (click)="sort('days')"
+                [attr.aria-sort]="sortField() === 'days' ? (sortDir() === 'asc' ? 'ascending' : 'descending') : 'none'">
+              Días
+              <span class="sort-icon" [attr.data-state]="sortIcon('days')"></span>
+            </th>
+            <th scope="col" class="col-bar">Antigüedad</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of filtered(); track row.moto.id; let i = $index) {
+            <tr class="aging-row" [style.--idx]="animIdx(i)">
+
+              <!-- VIN -->
+              <td class="cell-vin">{{ row.moto.vin }}</td>
+
+              <!-- Moto -->
+              <td class="cell-moto">
+                <span class="moto-model">{{ row.moto.brand }} {{ row.moto.model }}</span>
+                @if (row.moto.color) {
+                  <span class="moto-color">{{ row.moto.color }}</span>
+                }
+              </td>
+
+              <!-- Año -->
+              <td class="cell-yr">{{ row.moto.year }}</td>
+
+              <!-- Estado -->
+              <td>
+                <span class="status-badge" [attr.data-color]="STATUS_COLOR[row.moto.status]">
+                  {{ STATUS_LABEL[row.moto.status] }}
+                </span>
+              </td>
+
+              <!-- Modo ingreso -->
+              <td class="cell-acq">{{ ACQUISITION_LABEL[row.moto.acquisitionMode] }}</td>
+
+              <!-- Días -->
+              <td class="cell-num cell-days" [attr.data-level]="bucketClass(row.bucket)">
+                {{ row.days }}
+              </td>
+
+              <!-- Barra de antigüedad -->
+              <td class="cell-bar">
+                <span class="aging-bar">
+                  <span
+                    class="aging-bar-fill"
+                    [attr.data-level]="bucketClass(row.bucket)"
+                    [style.width.%]="(row.days / (maxDays() || 1)) * 100">
+                  </span>
+                </span>
+                <span class="aging-badge" [attr.data-level]="bucketClass(row.bucket)">
+                  {{ BUCKET_LABEL[row.bucket] }}
+                </span>
+              </td>
+
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>

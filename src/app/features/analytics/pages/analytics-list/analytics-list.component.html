@@ -1,0 +1,688 @@
+<div class="an-page">
+
+  <!-- ── Page header ──────────────────────────────────────────── -->
+  <div class="an-header">
+    <div class="an-header-text">
+      <h1 class="an-title">Analytics</h1>
+      <p class="an-sub">Período global: <strong>{{ periodLabel() }}</strong></p>
+    </div>
+    <div class="period-presets" role="group" aria-label="Período de análisis">
+      @for (p of PERIOD_PRESETS; track p.key) {
+        <button class="preset-btn" type="button"
+                [class.preset-btn--active]="activePeriod() === p.key"
+                (click)="setPeriod(p.key)">{{ p.label }}</button>
+      }
+    </div>
+  </div>
+
+  <!-- ── Alert strip (resumen ejecutivo) ──────────────────────── -->
+  @if (alerts().length > 0) {
+    <div class="an-alert-strip" role="status" aria-label="Alertas del período">
+      @for (alert of alerts(); track $index) {
+        <button class="an-alert" type="button" [attr.data-type]="alert.type"
+                (click)="navigateToAlert(alert.tab)">
+          <svg class="alert-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (alert.type === 'danger') {
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            } @else {
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            }
+          </svg>
+          {{ alert.message }}
+          <svg class="alert-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Tab bar ───────────────────────────────────────────────── -->
+  <div class="tab-bar" role="tablist" aria-label="Dimensión de análisis">
+    @for (tab of [
+      { key: 'ventas',     label: 'Ventas' },
+      { key: 'inventario', label: 'Inventario' },
+      { key: 'credito',    label: 'Crédito' },
+      { key: 'clientes',   label: 'Clientes' },
+      { key: 'cobranza',   label: 'Cobranza' },
+      { key: 'taller',     label: 'Taller' }
+    ]; track tab.key) {
+      <button class="tab-btn" role="tab"
+              [class.tab-btn--active]="activeTab() === tab.key"
+              [attr.aria-selected]="activeTab() === tab.key"
+              (click)="setTab($any(tab.key))">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: VENTAS
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'ventas') {
+    <div class="an-tab-content">
+      @if (salesState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis de ventas…</div>
+      } @else if (salesState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ salesErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retrySales()">Reintentar</button>
+        </div>
+      } @else {
+        @if (salesData(); as d) {
+
+          <!-- KPI strip -->
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                  {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                </span>
+              </div>
+            }
+          </div>
+
+          <!-- Proyección cierre de período -->
+          @if (d.projectedTotal > 0) {
+            <div class="an-projection">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                <polyline points="17 6 23 6 23 12"/>
+              </svg>
+              Al ritmo actual, cerrarás el período en <strong>S/ {{ d.projectedTotal | number:'1.0-0' }}</strong>
+            </div>
+          }
+
+          <!-- Section head -->
+          <div class="an-section-head">
+            <span class="an-section-label">Tendencia mensual — Ingresos (S/)</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('ventas')"
+                    [attr.aria-label]="exportSuccess() ? 'Exportado' : 'Exportar CSV ventas'">
+              @if (exportSuccess()) {
+                <span class="export-icon-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </span>
+                Exportado
+              } @else {
+                <span class="export-icon-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </span>
+                Exportar CSV
+              }
+            </button>
+          </div>
+
+          <!-- Bar chart: monthly trend -->
+          @if (d.monthlyTrend.length > 0) {
+            <div class="chart-wrap" aria-label="Tendencia mensual de ingresos" role="img">
+              @for (bar of d.monthlyTrend; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ shortNumber(bar.value) }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill" [style.height.%]="barHeightPct(bar.value, salesChartMax())"></div>
+                  </div>
+                  <span class="chart-label">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty" role="img" aria-label="Sin datos de tendencia">Sin datos para este período</div>
+          }
+
+          <!-- Table: by vendedor -->
+          <p class="an-table-label">Por vendedor</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Ventas por vendedor">
+              <thead>
+                <tr>
+                  <th>Vendedor</th>
+                  <th class="col-r">Unidades</th>
+                  <th class="col-r">Ingresos (S/)</th>
+                  <th class="col-r">Comisión (S/)</th>
+                  <th class="col-r">Conversión</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.byVendedor; track $index) {
+                  <tr>
+                    <td>{{ row.vendedor }}</td>
+                    <td class="col-r mono">{{ row.unidades }}</td>
+                    <td class="col-r mono">{{ row.ingresos | number:'1.0-0' }}</td>
+                    <td class="col-r mono">{{ row.comision | number:'1.0-0' }}</td>
+                    <td class="col-r">
+                      <span class="conv-pill">{{ row.conversion | number:'1.1-1' }}%</span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="col-empty">Sin ventas registradas para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: INVENTARIO
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'inventario') {
+    <div class="an-tab-content">
+      @if (invState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis de inventario…</div>
+      } @else if (invState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ invErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retryInv()">Reintentar</button>
+        </div>
+      } @else {
+        @if (invData(); as d) {
+
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                  {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                </span>
+              </div>
+            }
+          </div>
+
+          <div class="an-section-head">
+            <span class="an-section-label">Distribución por estado</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('inventario')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Exportar CSV
+            </button>
+          </div>
+
+          @if (d.byStatus.length > 0) {
+            <div class="chart-wrap chart-wrap--sm" aria-label="Distribución de inventario por estado" role="img">
+              @for (bar of d.byStatus; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ bar.value }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill chart-bar-fill--status"
+                         [style.height.%]="barHeightPct(bar.value, invChartMax())"></div>
+                  </div>
+                  <span class="chart-label chart-label--xs">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty chart-empty--sm" role="img" aria-label="Sin datos de inventario">Sin datos para este período</div>
+          }
+
+          <p class="an-table-label">Aging de inventario</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Aging de inventario">
+              <thead>
+                <tr>
+                  <th>Modelo</th>
+                  <th>Marca</th>
+                  <th class="col-r">Unidades</th>
+                  <th class="col-r">Días prom.</th>
+                  <th class="col-r">Valor est. (S/)</th>
+                  <th>Aging</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.aging; track $index) {
+                  <tr>
+                    <td>{{ row.modelo }}</td>
+                    <td class="col-muted">{{ row.marca }}</td>
+                    <td class="col-r mono">{{ row.unidades }}</td>
+                    <td class="col-r mono">{{ row.diasPromedio }}</td>
+                    <td class="col-r mono">{{ row.valorEstimado | number:'1.0-0' }}</td>
+                    <td>
+                      <span class="aging-badge" [class]="AGING_CLASS[row.bucket]">{{ row.bucket }}d</span>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="6" class="col-empty">Sin unidades en inventario para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: CRÉDITO
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'credito') {
+    <div class="an-tab-content">
+      @if (creditState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis de crédito…</div>
+      } @else if (creditState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ creditErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retryCredit()">Reintentar</button>
+        </div>
+      } @else {
+        @if (creditData(); as d) {
+
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                  {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                </span>
+              </div>
+            }
+          </div>
+
+          <div class="an-section-head">
+            <span class="an-section-label">Solicitudes mensuales</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('credito')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Exportar CSV
+            </button>
+          </div>
+
+          @if (d.monthlyTrend.length > 0) {
+            <div class="chart-wrap" aria-label="Solicitudes de crédito por mes" role="img">
+              @for (bar of d.monthlyTrend; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ bar.value }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill" [style.height.%]="barHeightPct(bar.value, creditChartMax())"></div>
+                  </div>
+                  <span class="chart-label">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty" role="img" aria-label="Sin datos de crédito">Sin datos para este período</div>
+          }
+
+          <p class="an-table-label">Conversión por fintech</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Conversión por fintech">
+              <thead>
+                <tr>
+                  <th>Fintech</th>
+                  <th class="col-r">Solicitudes</th>
+                  <th class="col-r">Aprobadas</th>
+                  <th class="col-r">Tasa aprobación</th>
+                  <th class="col-r">Desembolsado (S/)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.byFintech; track $index) {
+                  <tr>
+                    <td><strong>{{ row.fintech }}</strong></td>
+                    <td class="col-r mono">{{ row.solicitudes }}</td>
+                    <td class="col-r mono">{{ row.aprobadas }}</td>
+                    <td class="col-r">
+                      <div class="tasa-wrap">
+                        <span class="tasa-val">{{ row.tasa | number:'1.1-1' }}%</span>
+                        <span class="tasa-bar" [style.width.%]="tasaBarWidth(row.tasa)"></span>
+                      </div>
+                    </td>
+                    <td class="col-r mono">{{ row.desembolsado | number:'1.0-0' }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="col-empty">Sin solicitudes de crédito para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: CLIENTES
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'clientes') {
+    <div class="an-tab-content">
+      @if (custState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis de clientes…</div>
+      } @else if (custState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ custErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retryCustomers()">Reintentar</button>
+        </div>
+      } @else {
+        @if (custData(); as d) {
+
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                  {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                </span>
+              </div>
+            }
+          </div>
+
+          <div class="an-section-head">
+            <span class="an-section-label">Nuevos clientes por mes</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('clientes')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Exportar CSV
+            </button>
+          </div>
+
+          @if (d.monthlyTrend.length > 0) {
+            <div class="chart-wrap" aria-label="Nuevos clientes por mes" role="img">
+              @for (bar of d.monthlyTrend; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ bar.value }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill" [style.height.%]="barHeightPct(bar.value, custChartMax())"></div>
+                  </div>
+                  <span class="chart-label">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty" role="img" aria-label="Sin datos de clientes">Sin datos para este período</div>
+          }
+
+          <p class="an-table-label">Por canal de origen</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Clientes por canal de origen">
+              <thead>
+                <tr>
+                  <th>Canal</th>
+                  <th class="col-r">Leads</th>
+                  <th class="col-r">Clientes</th>
+                  <th class="col-r">Conversión</th>
+                  <th class="col-r">LTV prom. (S/)</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.byChannel; track $index) {
+                  <tr>
+                    <td>{{ row.canal }}</td>
+                    <td class="col-r mono">{{ row.leads }}</td>
+                    <td class="col-r mono">{{ row.clientes }}</td>
+                    <td class="col-r">
+                      <span class="conv-pill">{{ row.conversion | number:'1.1-1' }}%</span>
+                    </td>
+                    <td class="col-r mono">{{ row.ltv | number:'1.0-0' }}</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="5" class="col-empty">Sin leads registrados para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: COBRANZA
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'cobranza') {
+    <div class="an-tab-content">
+      @if (collState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis de cobranza…</div>
+      } @else if (collState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ collErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retryCollection()">Reintentar</button>
+        </div>
+      } @else {
+        @if (collData(); as d) {
+
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                  {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                </span>
+              </div>
+            }
+          </div>
+
+          <div class="an-section-head">
+            <span class="an-section-label">Monto cobrado por mes (S/)</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('cobranza')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Exportar CSV
+            </button>
+          </div>
+
+          @if (d.monthlyTrend.length > 0) {
+            <div class="chart-wrap" aria-label="Monto cobrado por mes" role="img">
+              @for (bar of d.monthlyTrend; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ shortNumber(bar.value) }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill chart-bar-fill--coll"
+                         [style.height.%]="barHeightPct(bar.value, collChartMax())"></div>
+                  </div>
+                  <span class="chart-label">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty" role="img" aria-label="Sin datos de cobranza">Sin pagos registrados en este período</div>
+          }
+
+          <p class="an-table-label">Por asesor de cobranza</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Cobranza por asesor">
+              <thead>
+                <tr>
+                  <th>Asesor</th>
+                  <th class="col-r">Cuentas</th>
+                  <th class="col-r">Cuotas vencidas</th>
+                  <th class="col-r">Mora (S/)</th>
+                  <th class="col-r">Cobrado (S/)</th>
+                  <th class="col-r">Tasa cobranza</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.byAdvisor; track $index) {
+                  <tr>
+                    <td><strong>{{ row.asesor }}</strong></td>
+                    <td class="col-r mono">{{ row.cuentasACargo }}</td>
+                    <td class="col-r mono">{{ row.cuotasVencidas }}</td>
+                    <td class="col-r mono">{{ row.montoMora | number:'1.0-0' }}</td>
+                    <td class="col-r mono">{{ row.montoCobrado | number:'1.0-0' }}</td>
+                    <td class="col-r">
+                      <div class="tasa-wrap">
+                        <span class="tasa-val" [class.tasa-val--ok]="row.tasaCobranza >= 70">
+                          {{ row.tasaCobranza | number:'1.1-1' }}%
+                        </span>
+                        <span class="tasa-bar tasa-bar--coll"
+                              [style.width.%]="tasaBarWidth(row.tasaCobranza)"></span>
+                      </div>
+                    </td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="6" class="col-empty">Sin cuentas en mora para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: TALLER
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'taller') {
+    <div class="an-tab-content">
+      @if (workshopState() === 'loading') {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando análisis del taller…</div>
+      } @else if (workshopState() === 'error') {
+        <div class="tab-error" role="alert">
+          <span>{{ workshopErr() }}</span>
+          <button class="btn-retry" type="button" (click)="retryWorkshop()">Reintentar</button>
+        </div>
+      } @else {
+        @if (workshopData(); as d) {
+
+          <!-- KPI strip -->
+          <div class="an-kpi-strip">
+            @for (kpi of d.kpis; track $index) {
+              <div class="an-kpi-card">
+                <span class="kpi-label">{{ kpi.label }}</span>
+                <span class="kpi-value">{{ formatKpi(kpi) }}</span>
+                @if (kpi.delta !== 0) {
+                  <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+                    {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs anterior
+                  </span>
+                } @else {
+                  <span class="kpi-delta delta--neu">Snapshot actual</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Section head + export -->
+          <div class="an-section-head">
+            <span class="an-section-label">OTs entregadas por mes</span>
+            <button class="btn-export-sm" type="button" (click)="exportCsv('taller')"
+                    [attr.aria-label]="exportSuccess() ? 'Exportado' : 'Exportar CSV taller'">
+              @if (exportSuccess()) {
+                <span class="export-icon-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                </span>
+                Exportado
+              } @else {
+                <span class="export-icon-wrap">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                  </svg>
+                </span>
+                Exportar CSV
+              }
+            </button>
+          </div>
+
+          <!-- Bar chart: OTs entregadas por mes (ámbar workshop) -->
+          @if (d.monthlyTrend.length > 0) {
+            <div class="chart-wrap chart-wrap--sm" aria-label="OTs entregadas por mes" role="img">
+              @for (bar of d.monthlyTrend; track trackByIdx($index)) {
+                <div class="chart-col">
+                  <span class="chart-val">{{ bar.value }}</span>
+                  <div class="chart-bar-track">
+                    <div class="chart-bar-fill chart-bar-fill--workshop"
+                         [style.height.%]="barHeightPct(bar.value, workshopChartMax())"></div>
+                  </div>
+                  <span class="chart-label">{{ bar.label }}</span>
+                </div>
+              }
+            </div>
+          } @else {
+            <div class="chart-empty chart-empty--sm" role="img" aria-label="Sin datos de taller">Sin OTs entregadas en este período</div>
+          }
+
+          <!-- Table: por técnico -->
+          <p class="an-table-label">Por técnico</p>
+          <div class="acc-table-wrap">
+            <table class="acc-table" aria-label="Rendimiento por técnico">
+              <thead>
+                <tr>
+                  <th>Técnico</th>
+                  <th class="col-r">OTs totales</th>
+                  <th class="col-r">OTs cerradas</th>
+                  <th class="col-r">Eficiencia</th>
+                  <th class="col-r">Ingresos (S/)</th>
+                  <th class="col-r">Días prom.</th>
+                  <th class="col-r">Horas</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (row of d.byTechnician; track $index) {
+                  <tr>
+                    <td><strong>{{ row.tecnico }}</strong></td>
+                    <td class="col-r mono">{{ row.totalOts }}</td>
+                    <td class="col-r mono">{{ row.otsCerradas }}</td>
+                    <td class="col-r">
+                      <div class="tasa-wrap">
+                        <span class="tasa-val"
+                              [class.tasa-val--workshop-ok]="eficBarWidth(row.otsCerradas, row.totalOts) >= 80">
+                          {{ eficBarWidth(row.otsCerradas, row.totalOts) }}%
+                        </span>
+                        <span class="tasa-bar tasa-bar--workshop"
+                              [style.width.%]="eficBarWidth(row.otsCerradas, row.totalOts)"></span>
+                      </div>
+                    </td>
+                    <td class="col-r mono">{{ row.ingresos | number:'1.0-0' }}</td>
+                    <td class="col-r col-muted">{{ row.avgDias }}d</td>
+                    <td class="col-r col-muted">{{ row.totalHoras | number:'1.1-1' }}h</td>
+                  </tr>
+                } @empty {
+                  <tr><td colspan="7" class="col-empty">Sin órdenes de trabajo para este período</td></tr>
+                }
+              </tbody>
+            </table>
+          </div>
+
+        }
+      }
+    </div>
+  }
+
+</div>

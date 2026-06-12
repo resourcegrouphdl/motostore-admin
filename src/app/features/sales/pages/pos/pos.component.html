@@ -1,0 +1,245 @@
+<!-- ── Loading ─────────────────────────────────────────────────────── -->
+@if (loadingData()) {
+  <div class="pos-loading" aria-live="polite">
+    <span class="pos-spinner" aria-hidden="true"></span>
+    Cargando catálogo…
+  </div>
+}
+
+@if (loadError()) {
+  <div class="error-banner" role="alert">{{ loadError() }}</div>
+}
+
+<!-- ── Success screen ─────────────────────────────────────────────── -->
+@if (saleComplete()) {
+  <div class="success-screen" role="status">
+    <div class="success-icon" aria-hidden="true">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </div>
+    <h2 class="success-title">Venta registrada</h2>
+    <p class="success-sub">La venta fue registrada correctamente.</p>
+    <div class="success-actions">
+      <button class="pos-btn pos-btn--primary" type="button" (click)="newSale()">
+        Nueva venta
+      </button>
+      <a class="pos-btn pos-btn--ghost" routerLink="/sales">
+        Ver historial
+      </a>
+    </div>
+  </div>
+}
+
+<!-- ── POS layout (main) ──────────────────────────────────────────── -->
+@if (!loadingData() && !loadError() && !saleComplete()) {
+  <div class="pos-layout">
+
+    <!-- ── LEFT: Search + results ───────────────────────────────── -->
+    <section class="pos-left" aria-label="Buscador de repuestos">
+
+      <div class="search-bar">
+        <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          class="search-input"
+          type="search"
+          placeholder="Buscar por SKU, nombre o marca…"
+          [ngModel]="query()"
+          (ngModelChange)="query.set($event)"
+          autocomplete="off"
+          aria-label="Buscar repuesto para agregar al carrito">
+      </div>
+
+      @if (query().length > 0 && searchResults().length === 0) {
+        <p class="no-results">Sin resultados para "{{ query() }}"</p>
+      }
+
+      @if (searchResults().length > 0) {
+        <ul class="results-list" role="listbox" aria-label="Resultados de búsqueda">
+          @for (rep of searchResults(); track rep.id; let i = $index) {
+            <li
+              class="result-item"
+              [style.--idx]="animIdx(i)"
+              role="option">
+              <div class="result-info">
+                <span class="result-sku">{{ rep.sku }}</span>
+                <span class="result-name">{{ rep.name }}</span>
+                @if (rep.brand) {
+                  <span class="result-brand">{{ rep.brand }}</span>
+                }
+                <span class="result-cat">{{ CAT_LABEL[rep.category] }}</span>
+              </div>
+              <div class="result-right">
+                @if (rep.listPrice) {
+                  <span class="result-price">S/ {{ rep.listPrice | number:'1.2-2' }}</span>
+                } @else {
+                  <span class="result-price result-price--na">Sin precio</span>
+                }
+                <button
+                  class="add-btn"
+                  type="button"
+                  (click)="addToCart(rep)"
+                  [attr.aria-label]="'Agregar ' + rep.name + ' al carrito'">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Agregar
+                </button>
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      @if (!query()) {
+        <div class="search-hint">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <p>Busca el repuesto por SKU, nombre o marca para agregarlo al carrito.</p>
+        </div>
+      }
+
+    </section>
+
+    <!-- ── RIGHT: Cart + sale form ──────────────────────────────── -->
+    <aside class="pos-right" aria-label="Carrito y cobro">
+
+      <!-- Cart header -->
+      <div class="cart-header">
+        <h2 class="cart-title">Carrito</h2>
+        @if (cartItemCount() > 0) {
+          <span class="cart-badge">{{ cartItemCount() }} ítem{{ cartItemCount() > 1 ? 's' : '' }}</span>
+          <button class="clear-btn" type="button" (click)="clearCart()">Vaciar</button>
+        }
+      </div>
+
+      <!-- Cart items -->
+      @if (cart().length === 0) {
+        <div class="cart-empty">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+            <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+          </svg>
+          <p>El carrito está vacío.</p>
+        </div>
+      }
+
+      <div class="cart-items">
+        @for (item of cart(); track item.repuesto.id; let i = $index) {
+          <div class="cart-item" [style.--idx]="animIdx(i)">
+            <div class="ci-info">
+              <span class="ci-name">{{ item.repuesto.name }}</span>
+              <span class="ci-sku">{{ item.repuesto.sku }}</span>
+            </div>
+            <div class="ci-controls">
+              <div class="qty-control">
+                <button class="qty-btn" type="button"
+                        (click)="updateQty(i, item.quantity - 1)"
+                        [attr.aria-label]="'Restar 1 de ' + item.repuesto.name">−</button>
+                <span class="qty-val">{{ item.quantity }}</span>
+                <button class="qty-btn" type="button"
+                        (click)="updateQty(i, item.quantity + 1)"
+                        [attr.aria-label]="'Sumar 1 de ' + item.repuesto.name">+</button>
+              </div>
+              <div class="price-control">
+                <span class="price-prefix">S/</span>
+                <input class="price-input" type="number" min="0" step="0.01"
+                       [ngModel]="item.unitPrice"
+                       (ngModelChange)="updatePrice(i, $event)"
+                       [attr.aria-label]="'Precio de ' + item.repuesto.name">
+              </div>
+              <span class="ci-subtotal">S/ {{ item.quantity * item.unitPrice | number:'1.2-2' }}</span>
+              <button class="ci-remove" type="button"
+                      (click)="removeFromCart(i)"
+                      [attr.aria-label]="'Quitar ' + item.repuesto.name + ' del carrito'">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Total -->
+      @if (cart().length > 0) {
+        <div class="cart-total">
+          <span class="total-label">Total</span>
+          <span class="total-value">S/ {{ cartTotal() | number:'1.2-2' }}</span>
+        </div>
+      }
+
+      <!-- Sale form -->
+      <div class="sale-form">
+
+        <!-- Customer -->
+        <div class="sf-field">
+          <label class="sf-label" for="pos-cust">Cliente <span class="req">*</span></label>
+          <select id="pos-cust" class="sf-select"
+                  [ngModel]="selectedCustomerId()"
+                  (ngModelChange)="selectedCustomerId.set($event)">
+            <option value="">— Seleccionar cliente —</option>
+            @for (c of customers(); track c.id) {
+              <option [value]="c.id">{{ c.fullName }}</option>
+            }
+          </select>
+        </div>
+
+        <!-- Payment method -->
+        <div class="sf-field">
+          <label class="sf-label" for="pos-pm">Método de pago</label>
+          <div class="pm-chips" role="group" aria-label="Método de pago">
+            @for (pm of ALL_PM; track pm) {
+              <button
+                class="pm-chip"
+                type="button"
+                [class.pm-chip--active]="paymentMethod() === pm"
+                (click)="paymentMethod.set(pm)"
+                [attr.aria-pressed]="paymentMethod() === pm">
+                {{ PM_LABEL[pm] }}
+              </button>
+            }
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="sf-field">
+          <label class="sf-label" for="pos-notes">Notas</label>
+          <input id="pos-notes" class="sf-input" type="text"
+                 placeholder="Observaciones…"
+                 [ngModel]="notes()"
+                 (ngModelChange)="notes.set($event)">
+        </div>
+
+        @if (submitError()) {
+          <div class="submit-error" role="alert">{{ submitError() }}</div>
+        }
+
+        <!-- Submit -->
+        <button
+          class="pos-btn pos-btn--primary pos-btn--full"
+          type="button"
+          (click)="submitSale()"
+          [disabled]="cart().length === 0 || !selectedCustomerId() || submitting()">
+          @if (submitting()) {
+            <span class="pos-spinner pos-spinner--sm" aria-hidden="true"></span>
+            Registrando…
+          } @else {
+            Cobrar S/ {{ cartTotal() | number:'1.2-2' }}
+          }
+        </button>
+
+      </div>
+
+    </aside>
+  </div>
+}

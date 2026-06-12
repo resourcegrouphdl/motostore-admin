@@ -1,0 +1,388 @@
+<!-- ── KPI strip ──────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <span class="kpi-num">{{ documents().length }}</span>
+    <span class="kpi-tag">documentos</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num kpi-num--ok">{{ emittedCount() }}</span>
+    <span class="kpi-tag">emitidos</span>
+  </div>
+  @if (failedCount() > 0) {
+    <div class="kpi-div"></div>
+    <div class="kpi-item">
+      <span class="kpi-num kpi-num--err">{{ failedCount() }}</span>
+      <span class="kpi-tag">con error</span>
+    </div>
+  }
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-num">S/ {{ totalIgv() | number:'1.2-2' }}</span>
+    <span class="kpi-tag">IGV total</span>
+  </div>
+
+  @if (pendingSales().length > 0) {
+    <div class="pending-pill" title="Ventas sin documento emitido">
+      {{ pendingSales().length }} sin documento
+    </div>
+  }
+
+  <button class="btn-export" type="button" (click)="exportCsv()" [disabled]="exporting() || loading()">
+    @if (exporting()) {
+      <span class="export-spinner"></span>
+      Exportando…
+    } @else {
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="7 10 12 15 17 10"/>
+        <line x1="12" y1="15" x2="12" y2="3"/>
+      </svg>
+      Exportar CSV
+    }
+  </button>
+  <button class="btn-emit" type="button" (click)="openEmit()" style="margin-left:0">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Emitir documento
+  </button>
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="bill-table">
+    <thead>
+      <tr>
+        <th scope="col">Número</th>
+        <th scope="col">Tipo</th>
+        <th scope="col">Cliente</th>
+        <th scope="col" class="col-right">Subtotal</th>
+        <th scope="col" class="col-right">IGV</th>
+        <th scope="col" class="col-right">Total</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Emisión</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        @for (s of [1,2,3]; track s) {
+          <tr class="skel-row">
+            <td><span class="skel skel--num"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--name"></span></td>
+            <td><span class="skel skel--amount"></span></td>
+            <td><span class="skel skel--amount"></span></td>
+            <td><span class="skel skel--amount"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--date"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && documents().length === 0 && !error()) {
+        <tr>
+          <td colspan="9">
+            <div class="empty-state">
+              <p>Sin documentos emitidos.</p>
+              <button class="link-btn" type="button" (click)="openEmit()">
+                Emitir el primero →
+              </button>
+            </div>
+          </td>
+        </tr>
+      }
+
+      @for (doc of documents(); track doc.id; let i = $index) {
+        <tr class="bill-row bill-row--clickable" [style.--idx]="animIdx(i)"
+            [class.bill-row--voided]="doc.status === 'VOIDED'"
+            [class.bill-row--failed]="doc.status === 'FAILED'"
+            [class.bill-row--selected]="selectedDoc()?.id === doc.id"
+            (click)="openDetail(doc)">
+
+          <td class="cell-num">{{ doc.documentNumber }}</td>
+
+          <td>
+            <span class="type-badge" [attr.data-type]="doc.type">
+              {{ TYPE_LABEL[doc.type] }}
+            </span>
+          </td>
+
+          <td class="cell-customer">
+            @if (doc.customerName) {
+              <span class="customer-name">{{ doc.customerName }}</span>
+              @if (doc.customerRuc) {
+                <span class="customer-ruc">RUC {{ doc.customerRuc }}</span>
+              }
+            } @else {
+              <span class="customer-name">{{ saleCustomer(doc.saleId) }}</span>
+            }
+          </td>
+
+          <td class="col-right cell-money">S/ {{ doc.subtotal | number:'1.2-2' }}</td>
+          <td class="col-right cell-igv">S/ {{ doc.igv | number:'1.2-2' }}</td>
+          <td class="col-right cell-money cell-money--bold">S/ {{ doc.total | number:'1.2-2' }}</td>
+
+          <td>
+            <span class="status-badge" [attr.data-status]="doc.status">
+              {{ STATUS_LABEL[doc.status] }}
+            </span>
+            @if (doc.status === 'FAILED' && doc.errorMessage) {
+              <span class="error-tooltip" [title]="doc.errorMessage">!</span>
+            }
+          </td>
+
+          <td class="cell-date">
+            {{ (doc.emittedAt || doc.createdAt) | date:'dd/MM/yy HH:mm' }}
+          </td>
+
+          <td class="cell-actions">
+            @if (doc.status === 'EMITTED') {
+              <button class="action-btn action-btn--void" type="button"
+                      (click)="voidDocument(doc); $event.stopPropagation()" title="Anular documento">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Detail panel ──────────────────────────────────────── -->
+@if (selectedDoc()) {
+  <div class="dialog-backdrop" (click)="closeDetail()" aria-hidden="true"></div>
+}
+<aside class="side-dialog detail-dialog" [class.side-dialog--open]="selectedDoc()"
+       role="dialog" aria-modal="true" aria-label="Detalle del documento">
+  @if (selectedDoc(); as doc) {
+    <div class="dialog-header">
+      <div class="detail-header-content">
+        <span class="detail-docnum">{{ doc.documentNumber }}</span>
+        <div class="detail-badges">
+          <span class="type-badge" [attr.data-type]="doc.type">{{ TYPE_LABEL[doc.type] }}</span>
+          <span class="status-badge" [attr.data-status]="doc.status">{{ STATUS_LABEL[doc.status] }}</span>
+        </div>
+      </div>
+      <button class="dialog-close" type="button" (click)="closeDetail()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="dialog-body">
+
+      <!-- Error message -->
+      @if (doc.status === 'FAILED' && doc.errorMessage) {
+        <div class="detail-error" role="alert">
+          <strong>Error de emisión:</strong> {{ doc.errorMessage }}
+        </div>
+      }
+
+      <!-- Customer section -->
+      <div class="detail-section">
+        <h3 class="detail-section-title">Receptor</h3>
+        <div class="detail-row">
+          <span class="detail-label">Nombre</span>
+          <span class="detail-value">{{ doc.customerName || saleCustomer(doc.saleId) }}</span>
+        </div>
+        @if (doc.customerRuc) {
+          <div class="detail-row">
+            <span class="detail-label">RUC</span>
+            <span class="detail-value detail-value--mono">{{ doc.customerRuc }}</span>
+          </div>
+        }
+      </div>
+
+      <!-- Serie / Correlativo -->
+      <div class="detail-section">
+        <h3 class="detail-section-title">Identificación</h3>
+        <div class="detail-row">
+          <span class="detail-label">Serie</span>
+          <span class="detail-value detail-value--mono">{{ doc.serie }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Correlativo</span>
+          <span class="detail-value detail-value--mono">{{ doc.correlativo }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Fecha emisión</span>
+          <span class="detail-value">{{ (doc.emittedAt || doc.createdAt) | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+      </div>
+
+      <!-- Amounts -->
+      <div class="detail-section">
+        <h3 class="detail-section-title">Importes</h3>
+        <div class="detail-row">
+          <span class="detail-label">Subtotal</span>
+          <span class="detail-value detail-value--mono">S/ {{ doc.subtotal | number:'1.2-2' }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">IGV 18%</span>
+          <span class="detail-value detail-value--mono">S/ {{ doc.igv | number:'1.2-2' }}</span>
+        </div>
+        <div class="detail-row detail-row--total">
+          <span class="detail-label">Total</span>
+          <span class="detail-value detail-value--mono detail-value--total">S/ {{ doc.total | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <!-- Downloads -->
+      <div class="detail-section">
+        <h3 class="detail-section-title">Documentos</h3>
+        <div class="detail-downloads">
+          <button class="btn-pdf-dl" type="button"
+                  (click)="downloadPdf(doc)" [disabled]="pdfLoading()"
+                  [attr.aria-label]="pdfLoading() ? 'Descargando PDF...' : 'Descargar PDF de ' + doc.documentNumber">
+            @if (pdfLoading()) {
+              <span class="pdf-spinner" aria-hidden="true"></span>
+              Descargando…
+            } @else {
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Descargar PDF
+            }
+          </button>
+          @if (doc.xmlUrl) {
+            <a class="download-btn download-btn--xml" [href]="doc.xmlUrl" target="_blank" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="16 18 22 12 16 6"/>
+                <polyline points="8 6 2 12 8 18"/>
+              </svg>
+              Descargar XML
+            </a>
+          }
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer with void action -->
+    @if (doc.status === 'EMITTED') {
+      <div class="dialog-footer">
+        <button class="btn-void-doc" type="button" (click)="voidDocument(doc)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+          Anular documento
+        </button>
+      </div>
+    }
+  }
+</aside>
+
+<!-- ── Emit dialog ───────────────────────────────────────── -->
+@if (emitOpen()) {
+  <div class="dialog-backdrop" (click)="closeEmit()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="emitOpen()"
+       role="dialog" aria-modal="true" aria-label="Emitir documento">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Emitir documento electrónico</h2>
+    <button class="dialog-close" type="button" (click)="closeEmit()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <form class="dialog-body" (ngSubmit)="submitEmit()" #ef="ngForm" novalidate>
+
+    <!-- Venta -->
+    <div class="field">
+      <label class="field-label" for="ed-sale">Venta <span class="req">*</span></label>
+      <select id="ed-sale" class="field-select" name="saleId"
+              [(ngModel)]="emitForm.saleId" required>
+        <option value="">— Seleccionar venta —</option>
+        @for (s of pendingSales(); track s.id) {
+          <option [value]="s.id">
+            {{ saleCustomer(s.id) }} — S/ {{ s.totalAmount | number:'1.0-0' }}
+            ({{ s.createdAt | date:'dd/MM/yy' }})
+          </option>
+        }
+      </select>
+      @if (pendingSales().length === 0) {
+        <span class="field-hint">Todas las ventas completadas ya tienen documento emitido.</span>
+      }
+    </div>
+
+    <!-- Tipo -->
+    <div class="field">
+      <label class="field-label" for="ed-type">Tipo de documento <span class="req">*</span></label>
+      <select id="ed-type" class="field-select" name="type"
+              [(ngModel)]="emitForm.type" required>
+        @for (t of EMIT_TYPES; track t) {
+          <option [value]="t">{{ TYPE_LABEL[t] }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Datos del receptor (requerido solo para factura) -->
+    @if (emitForm.type === 'FACTURA') {
+      <div class="field">
+        <label class="field-label" for="ed-ruc">RUC del receptor <span class="req">*</span></label>
+        <input id="ed-ruc" class="field-input" type="text" name="customerRuc"
+               maxlength="11" placeholder="20xxxxxxxxx"
+               [(ngModel)]="emitForm.customerRuc">
+      </div>
+      <div class="field">
+        <label class="field-label" for="ed-name">Razón social <span class="req">*</span></label>
+        <input id="ed-name" class="field-input" type="text" name="customerName"
+               placeholder="Empresa S.A.C."
+               [(ngModel)]="emitForm.customerName">
+      </div>
+    }
+
+    <div class="emit-info">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      El correlativo se asigna automáticamente (secuencia {{ emitForm.type === 'FACTURA' ? 'F001' : 'B001' }}).
+      El documento se emite de forma instantánea en el entorno local.
+    </div>
+
+    @if (emitError()) {
+      <div class="form-error" role="alert">{{ emitError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeEmit()" [disabled]="emitSubmitting()">
+        Cancelar
+      </button>
+      <button class="btn-submit" type="submit"
+              [disabled]="ef.invalid || !emitForm.saleId || emitSubmitting()">
+        @if (emitSubmitting()) {
+          <span class="spinner"></span> Emitiendo…
+        } @else {
+          Emitir {{ emitForm.type === 'FACTURA' ? 'Factura' : 'Boleta' }}
+        }
+      </button>
+    </div>
+  </form>
+</aside>

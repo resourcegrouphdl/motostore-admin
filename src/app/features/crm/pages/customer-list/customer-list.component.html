@@ -1,0 +1,285 @@
+<!-- ── Toolbar ──────────────────────────────────────────────── -->
+<div class="cl-toolbar">
+  <div class="cl-search-wrap">
+    <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input class="cl-search" type="search" placeholder="Buscar por nombre, DNI, teléfono…"
+           [(ngModel)]="query" [ngModelOptions]="{standalone: true}"
+           [attr.aria-label]="'Buscar entre ' + customers().length + ' clientes'">
+  </div>
+  <span class="cl-count">{{ filtered().length }} / {{ customers().length }}</span>
+  <button class="btn-add" type="button" (click)="openCreate()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo cliente
+  </button>
+</div>
+
+<!-- ── Error ─────────────────────────────────────────────────── -->
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────────── -->
+<div class="cl-table-wrap">
+  <table class="cl-table">
+    <thead>
+      <tr>
+        <th scope="col">Cliente</th>
+        <th scope="col">Contacto</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Registrado</th>
+        <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        @for (s of [1,2,3,4,5]; track s) {
+          <tr class="skel-row">
+            <td><span class="skel skel--name"></span></td>
+            <td><span class="skel skel--contact"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--date"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && filtered().length === 0 && !error()) {
+        <tr>
+          <td colspan="5">
+            <div class="empty-inline">
+              {{ query() ? 'Sin resultados para "' + query() + '"' : 'Sin clientes registrados.' }}
+              @if (!query()) {
+                <button class="link-btn" type="button" (click)="openCreate()">Crear el primero →</button>
+              }
+            </div>
+          </td>
+        </tr>
+      }
+
+      @for (c of filtered(); track c.id; let i = $index) {
+        <tr class="cl-row" [style.--idx]="animIdx(i)"
+            [class.cl-row--selected]="selected()?.id === c.id"
+            (click)="selectCustomer(c)" tabindex="0" role="button"
+            [attr.aria-expanded]="selected()?.id === c.id">
+
+          <!-- Cliente -->
+          <td class="cell-name">
+            <span class="cust-avatar" aria-hidden="true">
+              {{ c.firstName[0] }}{{ c.lastName[0] }}
+            </span>
+            <div class="cust-info">
+              <span class="cust-full-name">{{ c.fullName }}</span>
+              @if (c.dni) { <span class="cust-dni">DNI {{ c.dni }}</span> }
+            </div>
+          </td>
+
+          <!-- Contacto -->
+          <td class="cell-contact">
+            @if (c.phone) {
+              <span class="contact-line">{{ c.phone }}</span>
+            }
+            @if (c.email) {
+              <span class="contact-line contact-line--email">{{ c.email }}</span>
+            }
+          </td>
+
+          <!-- Estado -->
+          <td>
+            <span class="status-badge" [attr.data-color]="STATUS_COLOR[c.status]">
+              {{ STATUS_LABEL[c.status] }}
+            </span>
+          </td>
+
+          <!-- Fecha -->
+          <td class="cell-date">{{ daysAgo(c.createdAt) }}d</td>
+
+          <!-- Acciones -->
+          <td class="cell-actions" (click)="$event.stopPropagation()">
+            <button class="action-btn" type="button"
+                    (click)="openOpp(c)"
+                    title="Crear oportunidad">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+              </svg>
+            </button>
+          </td>
+        </tr>
+
+        <!-- ── Expanded detail row ──────────────────────────── -->
+        @if (selected()?.id === c.id) {
+          <tr class="detail-row">
+            <td colspan="5">
+              <div class="detail-panel">
+
+                <!-- Oportunidades -->
+                <div class="detail-section">
+                  <div class="section-hdr">
+                    <span class="section-title">Oportunidades</span>
+                    <button class="link-btn" type="button" (click)="openOpp(c)">+ Nueva</button>
+                  </div>
+                  @if (oppLoading()) {
+                    <p class="loading-txt">Cargando…</p>
+                  } @else if (opportunities().length === 0) {
+                    <p class="empty-txt">Sin oportunidades. Crea una para empezar el seguimiento.</p>
+                  } @else {
+                    <div class="opp-list">
+                      @for (opp of opportunities(); track opp.id) {
+                        <div class="opp-item" [class.opp-item--open]="selectedOppId() === opp.id">
+                          <button class="opp-btn" type="button" (click)="loadInteractions(opp.id)">
+                            <span class="opp-stage-dot" [attr.data-stage]="opp.stage" aria-hidden="true"></span>
+                            <span class="opp-stage">{{ STAGE_LABEL[opp.stage] }}</span>
+                            <span class="opp-age">{{ daysAgo(opp.updatedAt) }}d</span>
+                            <svg class="opp-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none"
+                                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                              <polyline [attr.points]="selectedOppId() === opp.id ? '18 15 12 9 6 15' : '6 9 12 15 18 9'"/>
+                            </svg>
+                          </button>
+
+                          <!-- Interacciones -->
+                          @if (selectedOppId() === opp.id) {
+                            <div class="inter-panel">
+                              <!-- Add interaction -->
+                              <div class="inter-form">
+                                <select class="inter-type-select" [(ngModel)]="interForm.type"
+                                        [ngModelOptions]="{standalone:true}" aria-label="Tipo de interacción">
+                                  @for (t of ALL_INTER_TYPES; track t) {
+                                    <option [value]="t">{{ INTER_LABEL[t] }}</option>
+                                  }
+                                </select>
+                                <input class="inter-notes-input" type="text" placeholder="Notas de la interacción…"
+                                       [(ngModel)]="interForm.notes" [ngModelOptions]="{standalone:true}"
+                                       (keyup.enter)="submitInteraction()">
+                                <button class="inter-submit" type="button"
+                                        (click)="submitInteraction()"
+                                        [disabled]="interSubmitting()">
+                                  @if (interSubmitting()) { … } @else { Guardar }
+                                </button>
+                              </div>
+
+                              <!-- History -->
+                              @if (interLoading()) {
+                                <p class="loading-txt">Cargando historial…</p>
+                              } @else if (interactions().length === 0) {
+                                <p class="empty-txt">Sin interacciones registradas aún.</p>
+                              } @else {
+                                <ul class="inter-list">
+                                  @for (inter of interactions(); track inter.id) {
+                                    <li class="inter-item">
+                                      <span class="inter-type">{{ INTER_LABEL[inter.type] }}</span>
+                                      @if (inter.notes) {
+                                        <span class="inter-notes">{{ inter.notes }}</span>
+                                      }
+                                      <span class="inter-date">{{ daysAgo(inter.occurredAt) }}d</span>
+                                    </li>
+                                  }
+                                </ul>
+                              }
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+
+              </div>
+            </td>
+          </tr>
+        }
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Create customer dialog ─────────────────────────────────── -->
+@if (createOpen()) {
+  <div class="dialog-backdrop" (click)="closeCreate()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="createOpen()"
+       role="dialog" aria-modal="true" aria-label="Nuevo cliente">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Nuevo cliente</h2>
+    <button class="dialog-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <form class="dialog-body" (ngSubmit)="submitCreate()" #cf="ngForm" novalidate>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cc-fn">Nombres <span class="req">*</span></label>
+        <input id="cc-fn" class="field-input" type="text" name="fn" autocomplete="off"
+               [(ngModel)]="createForm.firstName" required #fnF="ngModel"
+               [class.field-input--err]="fnF.invalid && fnF.touched">
+      </div>
+      <div class="field">
+        <label class="field-label" for="cc-ln">Apellidos <span class="req">*</span></label>
+        <input id="cc-ln" class="field-input" type="text" name="ln" autocomplete="off"
+               [(ngModel)]="createForm.lastName" required #lnF="ngModel"
+               [class.field-input--err]="lnF.invalid && lnF.touched">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="cc-dni">DNI</label>
+      <input id="cc-dni" class="field-input" type="text" name="dni" maxlength="8"
+             placeholder="12345678" [(ngModel)]="createForm.dni">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cc-phone">Teléfono</label>
+        <input id="cc-phone" class="field-input" type="tel" name="phone"
+               placeholder="987654321" [(ngModel)]="createForm.phone">
+      </div>
+      <div class="field">
+        <label class="field-label" for="cc-email">Email</label>
+        <input id="cc-email" class="field-input" type="email" name="email"
+               [(ngModel)]="createForm.email">
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label" for="cc-notes">Notas</label>
+      <textarea id="cc-notes" class="field-textarea" name="notes" rows="2"
+                placeholder="Observaciones iniciales…"
+                [(ngModel)]="createForm.notes"></textarea>
+    </div>
+    @if (createError()) {
+      <div class="form-error" role="alert">{{ createError() }}</div>
+    }
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeCreate()" [disabled]="createSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit" [disabled]="cf.invalid || createSubmitting()">
+        @if (createSubmitting()) { <span class="spinner"></span> Creando… } @else { Crear cliente }
+      </button>
+    </div>
+  </form>
+</aside>
+
+<!-- ── Create opportunity mini-dialog ────────────────────────── -->
+@if (oppFormOpen()) {
+  <div class="dialog-backdrop dialog-backdrop--sm" (click)="closeOpp()" aria-hidden="true"></div>
+  <div class="opp-mini-dialog" role="dialog" aria-modal="true" aria-label="Nueva oportunidad">
+    <h3 class="opp-dialog-title">Nueva oportunidad</h3>
+    <div class="field">
+      <label class="field-label" for="od-notes">Notas iniciales</label>
+      <input id="od-notes" class="field-input" type="text" name="opp-notes"
+             placeholder="Interesado en Honda CB 300R…" [(ngModel)]="oppForm.notes"
+             [ngModelOptions]="{standalone:true}">
+    </div>
+    <div class="opp-dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeOpp()">Cancelar</button>
+      <button class="btn-submit" type="button" (click)="submitOpp()" [disabled]="oppSubmitting()">
+        @if (oppSubmitting()) { Creando… } @else { Crear }
+      </button>
+    </div>
+  </div>
+}

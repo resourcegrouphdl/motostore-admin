@@ -1,0 +1,181 @@
+<!-- ── Header ─────────────────────────────────────────────── -->
+<div class="section-header">
+  <div class="section-meta">
+    <h2 class="section-title">Usuarios y roles</h2>
+    <p class="section-desc">
+      {{ activeCount() }} usuario{{ activeCount() !== 1 ? 's' : '' }} activo{{ activeCount() !== 1 ? 's' : '' }}.
+      Los cambios de rol son efectivos de inmediato.
+    </p>
+  </div>
+  @if (isManager()) {
+    <button class="btn-invite" type="button" (click)="openInvite()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Invitar usuario
+    </button>
+  }
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+@if (updateError()) {
+  <div class="error-banner" role="alert">{{ updateError() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="users-table">
+    <thead>
+      <tr>
+        <th scope="col">Usuario</th>
+        <th scope="col">Rol</th>
+        <th scope="col">Último acceso</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        @for (s of [1,2,3]; track s) {
+          <tr class="skel-row">
+            <td><div class="skel-user"><span class="skel skel--avatar"></span><div><span class="skel skel--name"></span><span class="skel skel--email"></span></div></div></td>
+            <td><span class="skel skel--role"></span></td>
+            <td><span class="skel skel--date"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && members().length === 0 && !error()) {
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">No hay usuarios registrados.</div>
+          </td>
+        </tr>
+      }
+
+      @for (m of members(); track m.id) {
+        <tr class="user-row" [class.user-row--me]="isMe(m)">
+
+          <td>
+            <div class="user-cell">
+              <div class="avatar" [style.--hue]="hue(m.firebaseUid)">
+                {{ initials(m.fullName) }}
+              </div>
+              <div class="user-info">
+                <span class="user-name">
+                  {{ m.fullName }}
+                  @if (isMe(m)) { <span class="me-badge">Tú</span> }
+                </span>
+                <span class="user-email">{{ m.email }}</span>
+              </div>
+            </div>
+          </td>
+
+          <td>
+            @if (isManager() && !isMe(m) && updatingId() !== m.id) {
+              <select class="role-select" [ngModel]="m.role"
+                      (ngModelChange)="changeRole(m, $event)"
+                      [attr.aria-label]="'Rol de ' + m.fullName">
+                @for (r of ALL_ROLES; track r) {
+                  <option [value]="r">{{ ROLE_LABELS[r] }}</option>
+                }
+              </select>
+            } @else if (updatingId() === m.id) {
+              <span class="spinner" aria-label="Actualizando"></span>
+            } @else {
+              <span class="role-badge role-badge--{{ m.role.toLowerCase() }}">
+                {{ ROLE_LABELS[m.role] }}
+              </span>
+            }
+          </td>
+
+          <td class="cell-date">
+            {{ m.lastLoginAt ? (m.lastLoginAt | date:'dd/MM/yy HH:mm') : '—' }}
+          </td>
+
+          <td class="cell-actions">
+            @if (isManager() && !isMe(m) && updatingId() !== m.id) {
+              @if (confirmDeactivateId() === m.id) {
+                <div class="confirm-row">
+                  <span class="confirm-label">¿Desactivar?</span>
+                  <button class="btn-danger-sm" type="button" (click)="confirmDeactivate()">Sí</button>
+                  <button class="btn-ghost-sm"  type="button" (click)="cancelDeactivate()">No</button>
+                </div>
+              } @else {
+                <button class="btn-deactivate" type="button"
+                        (click)="requestDeactivate(m.id)"
+                        [attr.title]="'Desactivar a ' + m.fullName">
+                  Desactivar
+                </button>
+              }
+            }
+          </td>
+
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Invite dialog ─────────────────────────────────────── -->
+@if (inviteOpen()) {
+  <div class="dialog-backdrop" (click)="closeInvite()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="inviteOpen()"
+       role="dialog" aria-modal="true" aria-label="Invitar usuario">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Invitar usuario</h2>
+    <button class="dialog-close" type="button" (click)="closeInvite()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <form class="dialog-body" (ngSubmit)="submitInvite()" #invForm="ngForm" novalidate>
+
+    <div class="field">
+      <label class="field-label" for="inv-email">Email <span class="req">*</span></label>
+      <input id="inv-email" class="field-input" type="email" name="email" required
+             placeholder="usuario@tienda.com" [(ngModel)]="inviteForm.email">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="inv-name">Nombre completo <span class="req">*</span></label>
+      <input id="inv-name" class="field-input" type="text" name="fullName" required
+             placeholder="Juan Pérez" [(ngModel)]="inviteForm.fullName">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="inv-role">Rol <span class="req">*</span></label>
+      <select id="inv-role" class="field-select" name="role" [(ngModel)]="inviteForm.role">
+        @for (r of ALL_ROLES; track r) {
+          <option [value]="r">{{ ROLE_LABELS[r] }}</option>
+        }
+      </select>
+    </div>
+
+    <p class="invite-note">
+      Se creará la cuenta en Firebase. El usuario deberá usar
+      <em>Olvidé mi contraseña</em> para activarla.
+    </p>
+
+    @if (inviteError()) {
+      <div class="form-error" role="alert">{{ inviteError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeInvite()"
+              [disabled]="inviteSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit"
+              [disabled]="invForm.invalid || inviteSubmitting()">
+        @if (inviteSubmitting()) { <span class="spinner spinner--white"></span> Invitando… }
+        @else { Invitar }
+      </button>
+    </div>
+  </form>
+</aside>

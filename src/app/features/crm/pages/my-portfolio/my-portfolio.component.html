@@ -1,0 +1,146 @@
+<!-- Loading -->
+@if (loading()) {
+  <div class="mp-skeleton">
+    <div class="sk-kpi-strip">
+      @for (_ of [0,1,2,3]; track $index) {
+        <div class="sk-kpi-card sk-shimmer"></div>
+      }
+    </div>
+    <div class="sk-block sk-shimmer"></div>
+    <div class="sk-block sk-shimmer" style="height:280px"></div>
+  </div>
+}
+
+<!-- Error -->
+@if (!loading() && error()) {
+  <p class="mp-error" role="alert">{{ error() }}</p>
+}
+
+<!-- Content -->
+@if (!loading() && !error()) {
+
+  <!-- KPI strip -->
+  <div class="kpi-strip" role="list" aria-label="Resumen de portafolio">
+    <div class="kpi-card" role="listitem" style="--idx:0">
+      <span class="kpi-value">{{ activeOpps().length }}</span>
+      <span class="kpi-label">Activas</span>
+    </div>
+    <div class="kpi-card" role="listitem" style="--idx:1">
+      <span class="kpi-value">{{ wonThisMonth().length }}</span>
+      <span class="kpi-label">Ganadas este mes</span>
+    </div>
+    <div class="kpi-card" role="listitem" style="--idx:2">
+      <span class="kpi-value">{{ lostThisMonth().length }}</span>
+      <span class="kpi-label">Perdidas este mes</span>
+    </div>
+    <div class="kpi-card kpi-card--accent" role="listitem" style="--idx:3">
+      <span class="kpi-value">{{ winRate() | number:'1.1-1' }}%</span>
+      <span class="kpi-label">Win rate</span>
+    </div>
+  </div>
+
+  <!-- Goal progress -->
+  @if (goal()) {
+    <section class="goal-section">
+      <h2 class="section-title">Metas — {{ period }}</h2>
+      <div class="goal-bars">
+        <!-- Units -->
+        <div class="goal-bar-row">
+          <div class="goal-bar-labels">
+            <span class="goal-bar-name">Cierres</span>
+            <span class="goal-bar-progress">{{ wonThisMonth().length }} / {{ goal()!.targetUnits }}</span>
+          </div>
+          <div class="goal-bar-track">
+            <div class="goal-bar-fill"
+                 [class.goal-bar-fill--done]="(goalUnitsProgress() ?? 0) >= 100"
+                 [style.width.%]="goalUnitsProgress() ?? 0"></div>
+          </div>
+        </div>
+        <!-- Win rate -->
+        <div class="goal-bar-row">
+          <div class="goal-bar-labels">
+            <span class="goal-bar-name">Win rate</span>
+            <span class="goal-bar-progress">{{ winRate() | number:'1.1-1' }}% / {{ goal()!.targetWinRate }}%</span>
+          </div>
+          <div class="goal-bar-track">
+            <div class="goal-bar-fill"
+                 [class.goal-bar-fill--done]="(goalWinRateProgress() ?? 0) >= 100"
+                 [style.width.%]="goalWinRateProgress() ?? 0"></div>
+          </div>
+        </div>
+        @if (goal()!.notes) {
+          <p class="goal-notes">{{ goal()!.notes }}</p>
+        }
+      </div>
+    </section>
+  }
+
+  <!-- Active opportunities -->
+  <section class="opp-section">
+    <h2 class="section-title">Oportunidades activas ({{ activeOpps().length }})</h2>
+
+    @if (activeOpps().length === 0) {
+      <p class="empty-hint">No tienes oportunidades activas en este momento.</p>
+    } @else {
+      <div class="opp-table-wrap">
+        <table class="opp-table" aria-label="Oportunidades activas">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Etapa</th>
+              <th>Cierre esperado</th>
+              <th>Avanzar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (opp of activeOpps(); track opp.id; let i = $index) {
+              <tr class="opp-row" [style.--idx]="i">
+                <td class="opp-id">{{ opp.customerId.slice(0,8).toUpperCase() }}</td>
+                <td>
+                  <span class="stage-badge" [class]="stageClass(opp.stage)">
+                    {{ stageLabel(opp.stage) }}
+                  </span>
+                </td>
+                <td class="opp-date">
+                  @if (opp.expectedCloseDate) {
+                    {{ opp.expectedCloseDate | date:'dd MMM yyyy' }}
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+                <td>
+                  @if (canAdvance(opp)) {
+                    <button class="btn-advance"
+                            (click)="advance(opp)"
+                            [disabled]="advancing() === opp.id"
+                            aria-label="Avanzar etapa">
+                      {{ advancing() === opp.id ? '…' : '→' }}
+                    </button>
+                  } @else {
+                    <span class="muted">—</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+  </section>
+
+  <!-- Won this month -->
+  @if (wonThisMonth().length > 0) {
+    <section class="won-section">
+      <h2 class="section-title">Ganadas este mes</h2>
+      <ul class="won-list" aria-label="Oportunidades ganadas este mes">
+        @for (opp of wonThisMonth(); track opp.id; let i = $index) {
+          <li class="won-item" [style.--idx]="i">
+            <span class="won-icon" aria-hidden="true">✓</span>
+            <span class="won-id">{{ opp.customerId.slice(0,8).toUpperCase() }}</span>
+            <span class="won-date muted">{{ opp.wonAt | date:'dd MMM' }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

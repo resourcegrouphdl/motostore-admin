@@ -1,0 +1,387 @@
+/* ── Step indicator ──────────────────────────────────────── */
+.step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 20px;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 24px;
+}
+
+.step-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--border);
+  flex-shrink: 0;
+  transition: background 200ms;
+  &--active { background: var(--accent); }
+}
+
+.step-line {
+  flex: 1; height: 2px;
+  background: var(--border);
+  transition: background 200ms;
+  &--done { background: var(--accent); }
+}
+
+.step-label {
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  margin-left: 10px; white-space: nowrap;
+}
+
+/* ── Step body ───────────────────────────────────────────── */
+.step-body {
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 8px;
+  animation: step-enter 180ms cubic-bezier(0.16,1,0.3,1) both;
+
+  &--split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+
+    @media (max-width: 680px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@keyframes step-enter {
+  from { opacity: 0; transform: translateX(8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ── Step 1: Verify ──────────────────────────────────────── */
+.verify-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  background: var(--bg-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-md);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.verify-field {
+  display: flex; flex-direction: column; gap: 4px;
+}
+
+.verify-label {
+  font-size: 11px; font-weight: 700; color: var(--ink-3);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+.verify-value {
+  font-size: 14px; font-weight: 500; color: var(--ink);
+  &--mono { font-family: var(--font-mono); }
+}
+
+.verify-note {
+  font-size: 12.5px; color: var(--ink-3);
+  padding: 10px 14px;
+  background: color-mix(in oklab, var(--warn) 8%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--warn) 20%, transparent);
+  border-radius: var(--r-sm);
+}
+
+/* ── Step 2: Photos ──────────────────────────────────────── */
+.step-hint {
+  font-size: 13px; color: var(--ink-3); margin-bottom: 16px;
+}
+
+.req-star { color: var(--danger); margin-left: 1px; }
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.photo-slot {
+  aspect-ratio: 4/3;
+  border-radius: var(--r-md);
+  border: 2px dashed var(--border);
+  overflow: hidden;
+  position: relative;
+  background: var(--bg-2);
+  transition: border-color 150ms;
+
+  &--required { border-color: color-mix(in oklab, var(--danger) 40%, var(--border)); }
+  &--filled   { border-style: solid; border-color: var(--success); }
+  &--error    { border-color: var(--danger); }
+  &:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+}
+
+.photo-slot-trigger {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; width: 100%; height: 100%;
+  cursor: pointer; padding: 12px;
+  color: var(--ink-3);
+  transition: color 120ms, background 120ms;
+
+  &:hover { color: var(--accent); background: color-mix(in oklab, var(--accent) 6%, transparent); }
+}
+
+.photo-slot-label {
+  font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3;
+}
+
+.photo-slot-loading {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+}
+
+.photo-slot-preview {
+  width: 100%; height: 100%; position: relative;
+}
+
+.photo-thumb {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+
+.photo-slot-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(to top, rgba(0,0,0,.55) 0%, transparent 50%);
+  display: flex; align-items: flex-end; justify-content: space-between;
+  padding: 8px 10px;
+  opacity: 0; transition: opacity 150ms;
+  .photo-slot-preview:hover & { opacity: 1; }
+}
+
+.photo-slot-done-label { font-size: 11px; color: #fff; font-weight: 600; }
+
+.photo-remove-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 600; color: #fff;
+  background: none; border: none; cursor: pointer; padding: 4px 6px;
+  border-radius: var(--r-sm); background: rgba(255,255,255,.2);
+  min-height: 28px;
+  transition: background 120ms;
+  &:hover { background: rgba(255,255,255,.35); }
+}
+
+.photo-slot-error {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: var(--danger); color: #fff;
+  font-size: 11px; padding: 4px 8px; text-align: center;
+}
+
+.required-hint {
+  font-size: 12px; color: var(--danger);
+  padding: 8px 12px;
+  background: color-mix(in oklab, var(--danger) 8%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 20%, transparent);
+  border-radius: var(--r-sm);
+  animation: step-enter 200ms cubic-bezier(0.16,1,0.3,1) both;
+}
+
+/* ── Step 3: Fields ──────────────────────────────────────── */
+.recipient-col { display: flex; flex-direction: column; gap: 14px; }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+
+.field-label {
+  font-size: 12px; font-weight: 700; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+
+.field-input {
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  color: var(--ink); font: inherit; font-size: 14px;
+  transition: border-color 120ms;
+  width: 100%;
+
+  &:focus { outline: none; border-color: var(--accent); }
+  &--invalid { border-color: var(--danger); }
+}
+
+.field-textarea { resize: vertical; min-height: 72px; }
+
+.field-error { font-size: 11.5px; color: var(--danger); }
+
+.delivery-timestamp {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12.5px; color: var(--ink-3);
+  padding: 10px 12px;
+  background: var(--bg-2); border-radius: var(--r-sm);
+  border: 1px solid var(--hairline);
+  margin-top: 4px;
+}
+
+/* ── Signature canvas ────────────────────────────────────── */
+.signature-col { display: flex; flex-direction: column; gap: 8px; }
+
+.signature-label {
+  font-size: 12px; font-weight: 700; color: var(--ink-2);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 0;
+}
+
+.signature-hint { font-size: 12px; color: var(--ink-3); margin: 0; }
+
+.canvas-wrapper {
+  position: relative;
+  border: 2px solid var(--border);
+  border-radius: var(--r-md);
+  background: #fff;
+  overflow: hidden;
+  cursor: crosshair;
+  transition: border-color 200ms, box-shadow 200ms;
+
+  &--signed {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--success) 15%, transparent);
+  }
+
+  &--shake { animation: shake 300ms cubic-bezier(0.36,0.07,0.19,0.97) both; }
+}
+
+@keyframes shake {
+  10%, 90%  { transform: translateX(-2px); }
+  20%, 80%  { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60%  { transform: translateX(4px); }
+}
+
+.sig-canvas {
+  display: block;
+  width: 100%;
+  height: 200px;
+  touch-action: none;
+}
+
+.canvas-guide {
+  position: absolute;
+  bottom: 36px; left: 12px; right: 12px;
+  height: 1px;
+  border-bottom: 1px dashed color-mix(in oklab, var(--ink) 20%, transparent);
+  pointer-events: none;
+}
+
+.sig-done-badge {
+  position: absolute; top: 8px; right: 10px;
+  background: var(--success); color: #fff;
+  font-size: 11px; font-weight: 700;
+  padding: 2px 7px; border-radius: 10px;
+  animation: badge-enter 160ms cubic-bezier(0.16,1,0.3,1) both;
+
+  @starting-style { opacity: 0; transform: scale(0.6); }
+}
+
+@keyframes badge-enter {
+  from { opacity: 0; transform: scale(0.6); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.clear-sig-btn {
+  align-self: flex-start;
+  font-size: 12px; color: var(--ink-3); background: none; border: none;
+  cursor: pointer; padding: 2px 0; text-decoration: underline;
+  transition: color 120ms;
+  &:hover:not(:disabled) { color: var(--danger); }
+  &:disabled { opacity: 0.4; cursor: default; }
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.step-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 0 0;
+  border-top: 1px solid var(--hairline);
+  margin-top: 24px;
+
+  &--confirm { align-items: flex-end; }
+}
+
+.confirm-col {
+  display: flex; flex-direction: column; align-items: flex-end; gap: 5px;
+}
+
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 10px 20px; border: none; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; transition: filter 120ms, transform 100ms;
+  &:hover:not(:disabled) { filter: brightness(1.1); }
+  &:active:not(:disabled) { transform: scale(0.98); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.btn-ghost {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 10px 16px; border: 1.5px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); color: var(--ink-2);
+  font: inherit; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: border-color 120ms, color 120ms;
+  &:hover:not(:disabled) { border-color: var(--ink); color: var(--ink); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.btn-confirm {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 12px 24px; border: none; border-radius: var(--r-sm);
+  background: var(--accent); color: #fff;
+  font: inherit; font-size: 14.5px; font-weight: 700;
+  cursor: pointer; transition: filter 120ms, transform 100ms;
+  min-width: 240px; justify-content: center;
+  &:hover:not(:disabled) { filter: brightness(1.1); }
+  &:active:not(:disabled) { transform: scale(0.98); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.irrev-note {
+  font-size: 11.5px; color: var(--ink-3); text-align: right;
+}
+
+.submit-error {
+  padding: 10px 14px; border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 20%, transparent);
+  color: var(--danger); font-size: 13px; margin-bottom: 4px;
+  animation: step-enter 180ms ease both;
+}
+
+/* ── Spinner ─────────────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid color-mix(in oklab, var(--accent) 30%, transparent);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+
+  &--white {
+    border-color: rgba(255,255,255,.3);
+    border-top-color: #fff;
+  }
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Accessibility ───────────────────────────────────────── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── Reduced motion ──────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .step-body, .step-dot, .step-line,
+  .sig-done-badge, .required-hint,
+  .submit-error { animation: none; transition: none; }
+
+  .canvas-wrapper--shake { animation: none; border-color: var(--danger); }
+  .spinner { animation: spin 1.5s linear infinite; }
+}

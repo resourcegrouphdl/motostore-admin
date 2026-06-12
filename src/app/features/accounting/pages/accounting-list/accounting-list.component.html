@@ -1,0 +1,680 @@
+<div class="acc-page">
+
+  <!-- ── Page header ──────────────────────────────────────────── -->
+  <div class="acc-header">
+    <div class="acc-header-text">
+      <h1 class="acc-title">Contabilidad</h1>
+      <p class="acc-sub">Libro diario · Plan de cuentas · Reportes SUNAT · Cierres de período</p>
+    </div>
+
+    <div class="period-selector-wrap">
+      <label class="period-label" for="period-select">Período</label>
+      @if (loadingPeriods()) {
+        <div class="period-skel"></div>
+      } @else if (periodsError()) {
+        <span class="period-error">{{ periodsError() }}</span>
+      } @else {
+        <div class="period-select-row">
+          <select id="period-select" class="period-select"
+                  [value]="selectedPeriodId()"
+                  (change)="changePeriod($any($event.target).value)">
+            @for (p of periods(); track p.id) {
+              <option [value]="p.id">{{ periodLabel(p) }}</option>
+            }
+          </select>
+          @if (selectedPeriod(); as period) {
+            <span class="period-status-badge"
+                  [attr.data-status]="period.status">
+              {{ PERIOD_STATUS_LABEL[period.status] }}
+            </span>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ── KPI strip ────────────────────────────────────────────── -->
+  @if (selectedPeriod(); as period) {
+    <div class="acc-kpi-strip">
+      <div class="kpi-item">
+        <span class="kpi-label">Asientos</span>
+        <span class="kpi-num">{{ period.totalEntries | number }}</span>
+      </div>
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Debe total</span>
+        <span class="kpi-num kpi-num--mono">
+          S/ {{ trialBalanceTotals().debit | number:'1.2-2' }}
+        </span>
+      </div>
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Haber total</span>
+        <span class="kpi-num kpi-num--mono">
+          S/ {{ trialBalanceTotals().credit | number:'1.2-2' }}
+        </span>
+      </div>
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Balance</span>
+        @if (trialBalance().length > 0) {
+          <span class="kpi-num"
+                [class.kpi-num--ok]="isBalanced()"
+                [class.kpi-num--danger]="!isBalanced()">
+            {{ isBalanced() ? 'Cuadrado' : 'Descuadrado' }}
+          </span>
+        } @else {
+          <span class="kpi-num kpi-num--muted">—</span>
+        }
+      </div>
+      @if (netIncome() !== null) {
+        <div class="kpi-item kpi-item--sep">
+          <span class="kpi-label">Utilidad neta</span>
+          <span class="kpi-num kpi-num--mono"
+                [class.kpi-num--ok]="netIncome()! >= 0"
+                [class.kpi-num--danger]="netIncome()! < 0">
+            S/ {{ netIncome()! | number:'1.2-2' }}
+          </span>
+        </div>
+      }
+    </div>
+  }
+
+  <!-- ── Tab bar ───────────────────────────────────────────────── -->
+  <div class="tab-bar" role="tablist" aria-label="Módulos de contabilidad">
+    @for (tab of [
+      { key: 'journal',  label: 'Diario' },
+      { key: 'chart',    label: 'Plan de Cuentas' },
+      { key: 'trial',    label: 'Balance' },
+      { key: 'income',   label: 'Resultados' },
+      { key: 'sunat',    label: 'SUNAT' },
+      { key: 'periods',  label: 'Períodos' }
+    ]; track tab.key) {
+      <button class="tab-btn" role="tab"
+              [class.tab-btn--active]="activeTab() === tab.key"
+              [attr.aria-selected]="activeTab() === tab.key"
+              (click)="setTab($any(tab.key))">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: DIARIO (Journal)
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'journal') {
+    <div class="tab-content">
+
+      <div class="tab-toolbar">
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="search-input" type="search" placeholder="Buscar asiento, referencia, fuente…"
+                 [value]="journalQuery()" (input)="journalQuery.set($any($event.target).value)"
+                 aria-label="Buscar en el diario" />
+        </div>
+        <span class="entry-count">{{ filteredJournal().length }} asiento{{ filteredJournal().length !== 1 ? 's' : '' }}</span>
+      </div>
+
+      @if (loadingJournal()) {
+        <div class="table-skeleton">
+          @for (s of [1,2,3,4,5,6]; track s) {
+            <div class="skel-row">
+              <div class="skel skel--date"></div>
+              <div class="skel skel--ref"></div>
+              <div class="skel skel--desc"></div>
+              <div class="skel skel--chip"></div>
+              <div class="skel skel--amt"></div>
+              <div class="skel skel--amt"></div>
+            </div>
+          }
+        </div>
+      } @else if (journalError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ journalError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryJournal()">Reintentar</button>
+        </div>
+      } @else if (filteredJournal().length === 0) {
+        <div class="tab-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>No hay asientos{{ journalQuery() ? ' que coincidan con la búsqueda' : ' en este período' }}.</span>
+        </div>
+      } @else {
+        <div class="acc-table-wrap">
+          <table class="acc-table" aria-label="Libro diario">
+            <thead>
+              <tr>
+                <th class="col-date">Fecha</th>
+                <th class="col-ref">Referencia</th>
+                <th class="col-desc">Descripción</th>
+                <th class="col-source">Fuente</th>
+                <th class="col-amt">Debe</th>
+                <th class="col-amt">Haber</th>
+                <th class="col-expand"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (entry of filteredJournal(); track trackById($index, entry)) {
+                <tr class="entry-row" (click)="toggleEntry(entry.id)"
+                    [class.entry-row--expanded]="expandedEntryId() === entry.id">
+                  <td class="col-date">{{ entry.date | date:'dd/MM/yy' }}</td>
+                  <td class="col-ref mono">{{ entry.reference }}</td>
+                  <td class="col-desc">{{ entry.description }}</td>
+                  <td class="col-source">
+                    <span class="source-chip" [attr.data-source]="entry.source">
+                      {{ ENTRY_SOURCE_LABEL[entry.source] }}
+                    </span>
+                  </td>
+                  <td class="col-amt mono">{{ entry.totalDebit | number:'1.2-2' }}</td>
+                  <td class="col-amt mono">{{ entry.totalCredit | number:'1.2-2' }}</td>
+                  <td class="col-expand">
+                    <svg class="chevron" [class.chevron--open]="expandedEntryId() === entry.id"
+                         width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </td>
+                </tr>
+                @if (expandedEntryId() === entry.id) {
+                  <tr class="lines-row">
+                    <td colspan="7">
+                      <div class="lines-wrap">
+                        <table class="lines-table">
+                          <thead>
+                            <tr>
+                              <th>Código</th>
+                              <th>Cuenta</th>
+                              <th>Glosa</th>
+                              <th class="col-amt">Debe</th>
+                              <th class="col-amt">Haber</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            @for (line of entry.lines; track trackByIdx($index)) {
+                              <tr>
+                                <td class="mono">{{ line.accountCode }}</td>
+                                <td>{{ line.accountName }}</td>
+                                <td class="line-glosa">{{ line.description }}</td>
+                                <td class="col-amt mono">
+                                  @if (line.debit > 0) { {{ line.debit | number:'1.2-2' }} }
+                                </td>
+                                <td class="col-amt mono">
+                                  @if (line.credit > 0) { {{ line.credit | number:'1.2-2' }} }
+                                </td>
+                              </tr>
+                            }
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: PLAN DE CUENTAS (Chart of Accounts)
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'chart') {
+    <div class="tab-content">
+
+      <div class="tab-toolbar tab-toolbar--wrap">
+        <div class="filter-chips" role="group" aria-label="Filtrar por tipo de cuenta">
+          <button class="chip" [class.chip--active]="chartTypeFilter() === 'ALL'"
+                  (click)="chartTypeFilter.set('ALL')">Todos</button>
+          @for (type of ACCOUNT_TYPES; track type) {
+            <button class="chip" [class.chip--active]="chartTypeFilter() === type"
+                    (click)="chartTypeFilter.set(type)">
+              {{ ACCOUNT_TYPE_LABEL[type] }}
+            </button>
+          }
+        </div>
+        <div class="search-wrap">
+          <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="search-input" type="search" placeholder="Buscar por código o nombre…"
+                 [value]="chartQuery()" (input)="chartQuery.set($any($event.target).value)"
+                 aria-label="Buscar cuenta" />
+        </div>
+      </div>
+
+      @if (loadingChart()) {
+        <div class="table-skeleton">
+          @for (s of [1,2,3,4,5,6,7,8]; track s) {
+            <div class="skel-row">
+              <div class="skel skel--ref"></div>
+              <div class="skel skel--desc"></div>
+              <div class="skel skel--chip"></div>
+              <div class="skel skel--amt"></div>
+            </div>
+          }
+        </div>
+      } @else if (chartError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ chartError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryChart()">Reintentar</button>
+        </div>
+      } @else if (filteredAccounts().length === 0) {
+        <div class="tab-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <span>No se encontraron cuentas.</span>
+        </div>
+      } @else {
+        <div class="acc-table-wrap">
+          <table class="acc-table" aria-label="Plan de cuentas">
+            <thead>
+              <tr>
+                <th class="col-code">Código</th>
+                <th>Nombre</th>
+                <th class="col-type">Tipo</th>
+                <th class="col-amt">Saldo Debe</th>
+                <th class="col-amt">Saldo Haber</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (acc of filteredAccounts(); track trackByCode($index, acc)) {
+                <tr [attr.data-level]="acc.level"
+                    [class.account-row--l1]="acc.level === 1"
+                    [class.account-row--l2]="acc.level === 2">
+                  <td class="col-code mono">{{ acc.code }}</td>
+                  <td [style.padding-left]="accountIndent(acc.level)">{{ acc.name }}</td>
+                  <td class="col-type">
+                    <span class="type-badge" [attr.data-type]="acc.type">
+                      {{ ACCOUNT_TYPE_LABEL[acc.type] }}
+                    </span>
+                  </td>
+                  <td class="col-amt mono">
+                    @if (acc.debitBalance > 0) { {{ acc.debitBalance | number:'1.2-2' }} }
+                  </td>
+                  <td class="col-amt mono">
+                    @if (acc.creditBalance > 0) { {{ acc.creditBalance | number:'1.2-2' }} }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: BALANCE DE COMPROBACIÓN (Trial Balance)
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'trial') {
+    <div class="tab-content">
+
+      @if (loadingTrial()) {
+        <div class="tab-loading">
+          <span class="spinner-sm"></span> Cargando balance…
+        </div>
+      } @else if (trialError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ trialError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryTrial()">Reintentar</button>
+        </div>
+      } @else if (trialBalance().length === 0) {
+        <div class="tab-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="3" y1="9" x2="21" y2="9"/>
+          </svg>
+          <span>No hay datos para este período.</span>
+          <button class="btn-load" type="button" (click)="loadTrialBalance()">Cargar balance</button>
+        </div>
+      } @else {
+        <div class="acc-table-wrap">
+          <table class="acc-table trial-table" aria-label="Balance de comprobación">
+            <thead>
+              <tr>
+                <th class="col-code">Código</th>
+                <th>Cuenta</th>
+                <th class="col-amt">Debe</th>
+                <th class="col-amt">Haber</th>
+                <th class="col-amt">Saldo neto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of trialBalance(); track row.accountCode) {
+                <tr [attr.data-level]="row.level"
+                    [class.account-row--l1]="row.level === 1"
+                    [class.account-row--l2]="row.level === 2">
+                  <td class="col-code mono">{{ row.accountCode }}</td>
+                  <td [style.padding-left]="accountIndent(row.level)">{{ row.accountName }}</td>
+                  <td class="col-amt mono">
+                    @if (row.debitBalance > 0) { {{ row.debitBalance | number:'1.2-2' }} }
+                  </td>
+                  <td class="col-amt mono">
+                    @if (row.creditBalance > 0) { {{ row.creditBalance | number:'1.2-2' }} }
+                  </td>
+                  <td class="col-amt mono"
+                      [class.net--positive]="trialNetBalance(row) > 0"
+                      [class.net--negative]="trialNetBalance(row) < 0">
+                    {{ trialNetBalance(row) | number:'1.2-2' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="trial-totals">
+                <td colspan="2">TOTALES</td>
+                <td class="col-amt mono">{{ trialBalanceTotals().debit | number:'1.2-2' }}</td>
+                <td class="col-amt mono">{{ trialBalanceTotals().credit | number:'1.2-2' }}</td>
+                <td class="col-amt">
+                  <span class="balance-indicator"
+                        [class.balance-indicator--ok]="isBalanced()"
+                        [class.balance-indicator--danger]="!isBalanced()">
+                    {{ isBalanced() ? '✓ Cuadrado' : '✗ Descuadrado' }}
+                  </span>
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: ESTADO DE RESULTADOS (Income Statement)
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'income') {
+    <div class="tab-content">
+
+      @if (loadingIncome()) {
+        <div class="tab-loading">
+          <span class="spinner-sm"></span> Cargando estado de resultados…
+        </div>
+      } @else if (incomeError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ incomeError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryIncome()">Reintentar</button>
+        </div>
+      } @else if (incomeStatement().length === 0) {
+        <div class="tab-empty">
+          <span>No hay datos de resultados para este período.</span>
+          <button class="btn-load" type="button" (click)="loadIncomeStatement()">Cargar resultados</button>
+        </div>
+      } @else {
+        <div class="income-card">
+          <div class="income-card__head">
+            <h2 class="income-card__title">Estado de Resultados</h2>
+            @if (selectedPeriod(); as period) {
+              <span class="income-card__period">{{ periodLabel(period) }}</span>
+            }
+          </div>
+          <table class="income-table" aria-label="Estado de resultados">
+            <tbody>
+              @for (row of incomeStatement(); track trackByIdx($index)) {
+                @if (row.isSeparator) {
+                  <tr class="income-sep" aria-hidden="true"><td colspan="2"></td></tr>
+                } @else {
+                  <tr [class.income-row--total]="row.isTotal">
+                    <td class="income-label" [style.padding-left.px]="row.indent * 20 + 16">
+                      {{ row.label }}
+                    </td>
+                    <td class="income-amt mono"
+                        [class.income-amt--ok]="row.isTotal && row.amount >= 0"
+                        [class.income-amt--danger]="row.isTotal && row.amount < 0">
+                      S/ {{ row.amount | number:'1.2-2' }}
+                    </td>
+                  </tr>
+                }
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: SUNAT PLE
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'sunat') {
+    <div class="tab-content">
+
+      <div class="tab-toolbar">
+        <div class="sunat-subtabs" role="group" aria-label="Registro SUNAT">
+          <button class="stab-btn" [class.stab-btn--active]="sunatSubTab() === 'sales'"
+                  (click)="sunatSubTab.set('sales')">
+            Registro de Ventas
+          </button>
+          <button class="stab-btn" [class.stab-btn--active]="sunatSubTab() === 'purchases'"
+                  (click)="sunatSubTab.set('purchases')">
+            Registro de Compras
+          </button>
+        </div>
+        <button class="btn-download" type="button"
+                [disabled]="(sunatSubTab() === 'sales' ? sunatSales() : sunatPurchases()).length === 0"
+                (click)="downloadSunat(sunatSubTab())">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Descargar PLE
+        </button>
+      </div>
+
+      @if (loadingSunat()) {
+        <div class="tab-loading">
+          <span class="spinner-sm"></span> Cargando registro…
+        </div>
+      } @else if (sunatError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ sunatError() }}</span>
+          <button class="btn-retry" type="button" (click)="retrySunat()">Reintentar</button>
+        </div>
+      } @else {
+
+        @if (sunatSubTab() === 'sales') {
+          @if (sunatSales().length === 0) {
+            <div class="tab-empty"><span>Sin comprobantes de venta en este período.</span></div>
+          } @else {
+            <div class="acc-table-wrap">
+              <table class="acc-table sunat-table" aria-label="Registro de ventas SUNAT">
+                <thead>
+                  <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-date">Fecha</th>
+                    <th>Tipo</th>
+                    <th class="col-ref">Serie-Número</th>
+                    <th class="col-ruc">RUC</th>
+                    <th>Razón Social</th>
+                    <th class="col-amt">Base Imp.</th>
+                    <th class="col-amt">IGV</th>
+                    <th class="col-amt">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (rec of sunatSales(); track rec.correlativo) {
+                    <tr>
+                      <td class="col-num mono">{{ rec.correlativo }}</td>
+                      <td class="col-date">{{ rec.fechaEmision }}</td>
+                      <td><span class="doc-type-chip">{{ rec.tipoDoc }}</span></td>
+                      <td class="col-ref mono">{{ rec.serie }}-{{ rec.numero }}</td>
+                      <td class="col-ruc mono">{{ rec.rucCliente }}</td>
+                      <td class="razonsoc">{{ rec.razonSocial }}</td>
+                      <td class="col-amt mono">{{ rec.baseImponible | number:'1.2-2' }}</td>
+                      <td class="col-amt mono">{{ rec.igv | number:'1.2-2' }}</td>
+                      <td class="col-amt mono fw-600">{{ rec.total | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+                <tfoot>
+                  <tr class="sunat-totals">
+                    <td colspan="6">TOTAL</td>
+                    <td class="col-amt mono">{{ sunatSalesTotals().base | number:'1.2-2' }}</td>
+                    <td class="col-amt mono">{{ sunatSalesTotals().igv | number:'1.2-2' }}</td>
+                    <td class="col-amt mono fw-600">{{ sunatSalesTotals().total | number:'1.2-2' }}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          }
+        }
+
+        @if (sunatSubTab() === 'purchases') {
+          @if (sunatPurchases().length === 0) {
+            <div class="tab-empty"><span>Sin comprobantes de compra en este período.</span></div>
+          } @else {
+            <div class="acc-table-wrap">
+              <table class="acc-table sunat-table" aria-label="Registro de compras SUNAT">
+                <thead>
+                  <tr>
+                    <th class="col-num">#</th>
+                    <th class="col-date">Fecha</th>
+                    <th>Tipo</th>
+                    <th class="col-ref">Serie-Número</th>
+                    <th class="col-ruc">RUC</th>
+                    <th>Proveedor</th>
+                    <th class="col-amt">Base Imp.</th>
+                    <th class="col-amt">IGV</th>
+                    <th class="col-amt">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (rec of sunatPurchases(); track rec.correlativo) {
+                    <tr>
+                      <td class="col-num mono">{{ rec.correlativo }}</td>
+                      <td class="col-date">{{ rec.fechaEmision }}</td>
+                      <td><span class="doc-type-chip">{{ rec.tipoDoc }}</span></td>
+                      <td class="col-ref mono">{{ rec.serie }}-{{ rec.numero }}</td>
+                      <td class="col-ruc mono">{{ rec.rucProveedor }}</td>
+                      <td class="razonsoc">{{ rec.razonSocial }}</td>
+                      <td class="col-amt mono">{{ rec.baseImponible | number:'1.2-2' }}</td>
+                      <td class="col-amt mono">{{ rec.igv | number:'1.2-2' }}</td>
+                      <td class="col-amt mono fw-600">{{ rec.total | number:'1.2-2' }}</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        }
+
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: PERÍODOS / CIERRE
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'periods') {
+    <div class="tab-content">
+
+      @if (loadingPeriods()) {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando períodos…</div>
+      } @else if (periodsError()) {
+        <div class="tab-error" role="alert"><span>{{ periodsError() }}</span></div>
+      } @else {
+
+        <div class="periods-list">
+          @for (period of periods(); track period.id) {
+            <div class="period-row" [class.period-row--selected]="selectedPeriodId() === period.id">
+              <div class="period-row__main">
+                <div class="period-row__name">{{ periodLabel(period) }}</div>
+                <div class="period-row__meta">
+                  <span class="period-status-badge" [attr.data-status]="period.status">
+                    {{ PERIOD_STATUS_LABEL[period.status] }}
+                  </span>
+                  <span class="period-entries">{{ period.totalEntries | number }} asientos</span>
+                  @if (period.closedAt) {
+                    <span class="period-closed-at">
+                      Cerrado {{ period.closedAt | date:'dd/MM/yyyy' }}
+                    </span>
+                  }
+                </div>
+              </div>
+              <div class="period-row__actions">
+                <button class="btn-view-period" type="button"
+                        (click)="changePeriod(period.id); setTab('journal')">
+                  Ver diario
+                </button>
+                @if (period.status === 'OPEN') {
+                  <button class="btn-close-period" type="button"
+                          (click)="requestClose(period.id)">
+                    Cerrar período
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+
+        <!-- Close confirmation panel -->
+        @if (closeConfirmId(); as confirmId) {
+          <div class="close-panel">
+            <h2 class="close-panel__title">Cerrar período contable</h2>
+            <p class="close-panel__sub">
+              Esta acción es irreversible. Una vez cerrado, no se podrán registrar ni modificar asientos en este período.
+            </p>
+
+            <div class="checklist">
+              @for (check of closeChecklist(); track trackByIdx($index)) {
+                <div class="checklist-item"
+                     [class.checklist-item--ok]="check.passed"
+                     [class.checklist-item--fail]="!check.passed">
+                  <div class="checklist-icon" aria-hidden="true">
+                    @if (check.passed) {
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    } @else {
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    }
+                  </div>
+                  <span class="checklist-label">{{ check.label }}</span>
+                </div>
+              }
+            </div>
+
+            @if (closeError()) {
+              <div class="close-error" role="alert">{{ closeError() }}</div>
+            }
+
+            <div class="close-panel__actions">
+              <button class="btn-cancel-close" type="button"
+                      [disabled]="closeLoading()" (click)="cancelClose()">
+                Cancelar
+              </button>
+              <button class="btn-confirm-close" type="button"
+                      [disabled]="!canClose()" (click)="confirmClose()">
+                @if (closeLoading()) { <span class="spinner-sm spinner-sm--white"></span> }
+                Confirmar cierre
+              </button>
+            </div>
+          </div>
+        }
+
+      }
+
+    </div>
+  }
+
+</div>

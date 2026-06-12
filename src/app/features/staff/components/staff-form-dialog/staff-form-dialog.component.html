@@ -1,0 +1,54 @@
+<h2 mat-dialog-title>
+  {{ isEditMode ? 'Editar personal' : 'Agregar personal' }}
+</h2>
+
+<mat-dialog-content class="flex flex-col gap-4 pt-2">
+  <form [formGroup]="form" id="staffForm" (ngSubmit)="submit()" class="flex flex-col gap-3">
+
+    @if (!isEditMode) {
+      <mat-form-field appearance="outline" class="w-full">
+        <mat-label>Email</mat-label>
+        <input matInput type="email" formControlName="email"
+               placeholder="nombre@empresa.com" />
+        @if (form.controls.email.invalid && form.controls.email.touched) {
+          <mat-error>Ingresa un email válido</mat-error>
+        }
+        <mat-hint>Si no tiene cuenta Firebase se creará automáticamente.</mat-hint>
+      </mat-form-field>
+    }
+
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>Nombre completo</mat-label>
+      <input matInput formControlName="fullName" />
+      @if (form.controls.fullName.invalid && form.controls.fullName.touched) {
+        <mat-error>El nombre es obligatorio (máx. 200 caracteres)</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="w-full">
+      <mat-label>Rol</mat-label>
+      <mat-select formControlName="role">
+        @for (role of allRoles; track role) {
+          <mat-option [value]="role">{{ roleLabels[role] }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (error()) {
+      <p class="text-red-600 text-sm">{{ error() }}</p>
+    }
+
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end" class="gap-2">
+  <button mat-button (click)="cancel()" [disabled]="loading()">Cancelar</button>
+  <button mat-flat-button color="primary"
+          form="staffForm" type="submit"
+          [disabled]="form.invalid || loading()">
+    @if (loading()) {
+      <mat-spinner diameter="18" class="inline-block mr-1" />
+    }
+    {{ isEditMode ? 'Guardar cambios' : 'Registrar' }}
+  </button>
+</mat-dialog-actions>

@@ -1,0 +1,341 @@
+<div class="so-page">
+
+  <!-- KPI strip — clickeables como filtros primarios -->
+  <div class="kpi-strip" role="group" aria-label="Filtrar pedidos">
+    <button
+      class="kpi-card"
+      [class.kpi-card--active]="kpiFilter() === 'TODOS'"
+      (click)="selectKpi('TODOS')"
+      [attr.aria-pressed]="kpiFilter() === 'TODOS'">
+      <span class="kpi-value">{{ kpiTotal() }}</span>
+      <span class="kpi-label">Total pedidos</span>
+    </button>
+    <button
+      class="kpi-card kpi-card--amber"
+      [class.kpi-card--active]="kpiFilter() === 'PENDIENTE'"
+      (click)="selectKpi('PENDIENTE')"
+      [attr.aria-pressed]="kpiFilter() === 'PENDIENTE'">
+      <span class="kpi-value">{{ kpiPending() }}</span>
+      <span class="kpi-label">Pendientes</span>
+    </button>
+    <button
+      class="kpi-card kpi-card--blue"
+      [class.kpi-card--active]="kpiFilter() === 'EN_PROCESO'"
+      (click)="selectKpi('EN_PROCESO')"
+      [attr.aria-pressed]="kpiFilter() === 'EN_PROCESO'">
+      <span class="kpi-value">{{ kpiActive() }}</span>
+      <span class="kpi-label">En proceso</span>
+    </button>
+    <button
+      class="kpi-card kpi-card--green"
+      [class.kpi-card--active]="kpiFilter() === 'ENTREGADA'"
+      (click)="selectKpi('ENTREGADA')"
+      [attr.aria-pressed]="kpiFilter() === 'ENTREGADA'">
+      <span class="kpi-value">{{ kpiDone() }}</span>
+      <span class="kpi-label">Entregados</span>
+    </button>
+  </div>
+
+  <!-- Toolbar de acciones -->
+  <div class="export-toolbar">
+    <button class="btn-export" (click)="exportCsv()" [disabled]="exporting() || loading()">
+      @if (exporting()) {
+        <span class="export-spinner"></span>
+        Exportando…
+      } @else {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Exportar CSV
+      }
+    </button>
+  </div>
+
+  <!-- Sub-filtros — solo cuando En Proceso está activo -->
+  @if (showSubFilters()) {
+    <div class="sub-filter-bar" role="group" aria-label="Refinar por estado">
+      <button
+        class="sub-chip"
+        [class.sub-chip--active]="subFilter() === null"
+        (click)="subFilter.set(null)">
+        Todos en proceso
+      </button>
+      @for (s of subFilterOpts; track s) {
+        <button
+          class="sub-chip"
+          [class.sub-chip--active]="subFilter() === s"
+          (click)="subFilter.set(s)">
+          <span class="sub-chip-dot sub-chip-dot--{{ s | lowercase }}"></span>
+          {{ statusLabel[s] }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- Tabla + Panel -->
+  <div class="so-layout" [class.so-layout--panel]="panelVisible()">
+
+    <!-- Tabla -->
+    <div class="table-wrap">
+
+      @if (loading()) {
+        <div class="skeleton-rows">
+          @for (i of [1,2,3,4,5]; track i) {
+            <div class="skeleton-row shimmer"></div>
+          }
+        </div>
+      } @else if (error()) {
+        <div class="empty-state">{{ error() }}</div>
+      } @else if (filtered().length === 0) {
+        <div class="empty-state">Sin pedidos en esta categoría.</div>
+      } @else {
+        <table class="so-table">
+          <thead>
+            <tr>
+              <th>Número</th>
+              <th>Cliente</th>
+              <th>Total</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              <th class="th-chevron"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (order of filtered(); track order.id; let i = $index) {
+              <tr
+                class="so-row"
+                [class.so-row--selected]="selected()?.id === order.id"
+                [style.--idx]="i"
+                (click)="selectOrder(order)"
+                tabindex="0"
+                (keydown.enter)="selectOrder(order)"
+                (keydown.space)="selectOrder(order)">
+                <td class="cell-numero">{{ order.numeroOrden }}</td>
+                <td class="cell-name">
+                  <span class="name">{{ order.customerName }}</span>
+                  @if (order.customerPhone) {
+                    <span class="phone">{{ order.customerPhone }}</span>
+                  }
+                </td>
+                <td class="cell-total">
+                  {{ order.total | currency:'PEN':'symbol':'1.2-2' }}
+                </td>
+                <td>
+                  <span class="status-badge status-badge--{{ order.status | lowercase }}">
+                    {{ statusLabel[order.status] }}
+                  </span>
+                </td>
+                <td class="cell-date">{{ order.createdAt | date:'dd/MM/yy HH:mm' }}</td>
+                <td class="cell-chevron">
+                  <svg class="chevron-icon" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+
+    <!-- Panel detalle — siempre en DOM, animado con clase -->
+    <aside
+      class="detail-panel"
+      [class.detail-panel--visible]="panelVisible()"
+      aria-label="Detalle del pedido"
+      [attr.aria-hidden]="!panelVisible()">
+
+      @if (selected(); as order) {
+        <!-- Header + Stepper -->
+        <div class="panel-header">
+          <div class="panel-title-row">
+            <span class="panel-numero">{{ order.numeroOrden }}</span>
+            <span class="status-badge status-badge--{{ order.status | lowercase }}">
+              {{ statusLabel[order.status] }}
+            </span>
+            @if (lastNotifSent() === true) {
+              <span class="wa-notif-badge" title="Notificación enviada al cliente por WhatsApp">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.17-1.32A9.93 9.93 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.85 13.65c-.2.56-1.19 1.1-1.63 1.16-.44.07-.99.1-1.6-.1-.37-.12-.84-.28-1.45-.55-2.54-1.1-4.2-3.66-4.33-3.83-.13-.17-1.07-1.42-1.07-2.71s.68-1.92.92-2.18c.24-.26.52-.33.7-.33.18 0 .35 0 .5.01.16.01.38-.06.6.46.22.52.74 1.8.8 1.93.07.13.11.28.02.45-.09.17-.13.28-.26.43l-.39.45c-.13.13-.27.27-.12.53.15.26.68 1.12 1.46 1.82.99.89 1.83 1.16 2.09 1.29.26.13.41.11.56-.07.15-.18.63-.74.8-1 .17-.26.35-.21.59-.13.24.08 1.53.72 1.79.85.26.13.43.19.5.3.06.1.06.56-.14 1.12z"/>
+                </svg>
+                WA enviado
+              </span>
+            }
+          </div>
+          <button
+            class="btn-close"
+            (click)="closePanel()"
+            aria-label="Cerrar panel de detalle">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Stepper de progreso -->
+        @if (order.status !== 'CANCELADA') {
+          <div class="stepper" aria-label="Progreso del pedido">
+            @for (step of stepperSteps; track step; let last = $last) {
+              <div class="step step--{{ stepState(step, order.status) }}">
+                <div class="step-node">
+                  @if (stepState(step, order.status) === 'done') {
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="3" aria-hidden="true">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                  }
+                </div>
+                @if (!last) { <div class="step-line"></div> }
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="cancelled-banner">Pedido cancelado</div>
+        }
+
+        <!-- Info cliente -->
+        <div class="panel-section">
+          <div class="section-title">Cliente</div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Nombre</span>
+              <span class="info-val">{{ order.customerName }}</span>
+            </div>
+            @if (order.customerPhone) {
+              <div class="info-item">
+                <span class="info-label">Teléfono</span>
+                <span class="info-val">{{ order.customerPhone }}</span>
+              </div>
+            }
+            @if (order.customerEmail) {
+              <div class="info-item">
+                <span class="info-label">Email</span>
+                <span class="info-val">{{ order.customerEmail }}</span>
+              </div>
+            }
+            @if (order.customerAddress) {
+              <div class="info-item info-item--full">
+                <span class="info-label">Dirección</span>
+                <span class="info-val">{{ order.customerAddress }}</span>
+              </div>
+            }
+            @if (order.notes) {
+              <div class="info-item info-item--full">
+                <span class="info-label">Observaciones</span>
+                <span class="info-val">{{ order.notes }}</span>
+              </div>
+            }
+          </div>
+        </div>
+
+        <!-- Ítems -->
+        <div class="panel-section">
+          <div class="section-title">Ítems del pedido</div>
+          @if (itemsLoading()) {
+            <div class="items-skeleton">
+              @for (i of [1,2,3]; track i) {
+                <div class="item-skel-row shimmer"></div>
+              }
+            </div>
+          } @else if (order.items.length === 0) {
+            <div class="items-empty">Sin ítems registrados.</div>
+          } @else {
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Repuesto</th>
+                  <th class="th-right">Cant.</th>
+                  <th class="th-right">P.Unit</th>
+                  <th class="th-right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of order.items; track item.id) {
+                  <tr>
+                    <td>
+                      <span class="item-name">{{ item.nombre }}</span>
+                      @if (item.sku) {
+                        <span class="item-sku">{{ item.sku }}</span>
+                      }
+                    </td>
+                    <td class="td-right">{{ item.cantidad }}</td>
+                    <td class="td-right">{{ item.precioUnitario | currency:'PEN':'symbol':'1.2-2' }}</td>
+                    <td class="td-right">{{ item.total | currency:'PEN':'symbol':'1.2-2' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+
+        <!-- Totales -->
+        <div class="totals-block">
+          <div class="totals-row">
+            <span>Subtotal</span>
+            <span>{{ order.subtotal | currency:'PEN':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="totals-row">
+            <span>IGV (18%)</span>
+            <span>{{ order.igv | currency:'PEN':'symbol':'1.2-2' }}</span>
+          </div>
+          <div class="totals-row totals-row--total">
+            <span>Total</span>
+            <span>{{ order.total | currency:'PEN':'symbol':'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <!-- Acciones / Confirmación inline -->
+        <div class="panel-actions">
+          @if (confirming()) {
+            <div class="confirm-block">
+              <p class="confirm-text">
+                ¿Cancelar el pedido <strong>{{ order.numeroOrden }}</strong>?
+                Esta acción no se puede deshacer.
+              </p>
+              <div class="confirm-btns">
+                <button class="btn-confirm-yes" (click)="confirmCancel(order)">
+                  Sí, cancelar
+                </button>
+                <button class="btn-confirm-no" (click)="abortCancel()">
+                  No, volver
+                </button>
+              </div>
+            </div>
+          } @else {
+            @if (statusNext[order.status]; as next) {
+              <button
+                class="btn-advance"
+                [disabled]="updating()"
+                (click)="advance(order)">
+                @if (updating()) { <span class="btn-spinner"></span> }
+                {{ next.label }}
+              </button>
+            }
+            @if (canCancel(order)) {
+              <button class="btn-cancel" [disabled]="updating()" (click)="requestCancel()">
+                Cancelar pedido
+              </button>
+            }
+          }
+        </div>
+      }
+    </aside>
+  </div>
+
+  <!-- Toast -->
+  @if (toast()) {
+    <div class="so-toast" [class.so-toast--wa]="toastWa()" role="status" aria-live="polite">
+      @if (toastWa()) {
+        <svg class="toast-wa-icon" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 2C6.48 2 2 6.48 2 12c0 1.82.49 3.53 1.34 5L2 22l5.17-1.32A9.93 9.93 0 0 0 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm4.85 13.65c-.2.56-1.19 1.1-1.63 1.16-.44.07-.99.1-1.6-.1-.37-.12-.84-.28-1.45-.55-2.54-1.1-4.2-3.66-4.33-3.83-.13-.17-1.07-1.42-1.07-2.71s.68-1.92.92-2.18c.24-.26.52-.33.7-.33.18 0 .35 0 .5.01.16.01.38-.06.6.46.22.52.74 1.8.8 1.93.07.13.11.28.02.45-.09.17-.13.28-.26.43l-.39.45c-.13.13-.27.27-.12.53.15.26.68 1.12 1.46 1.82.99.89 1.83 1.16 2.09 1.29.26.13.41.11.56-.07.15-.18.63-.74.8-1 .17-.26.35-.21.59-.13.24.08 1.53.72 1.79.85.26.13.43.19.5.3.06.1.06.56-.14 1.12z"/>
+        </svg>
+      }
+      {{ toast() }}
+    </div>
+  }
+</div>

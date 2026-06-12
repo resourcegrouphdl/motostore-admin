@@ -1,0 +1,476 @@
+<div class="po-page">
+
+  <!-- ── Header ─────────────────────────────────────────────────────── -->
+  <header class="po-header">
+    <div class="po-header-left">
+      <h1 class="po-title">Órdenes de compra</h1>
+      @if (!loading()) {
+        <span class="po-count">{{ orders().length }} órdenes</span>
+      }
+    </div>
+    <button class="btn-add" type="button" (click)="openCreate()">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      Nueva OC
+    </button>
+  </header>
+
+  <!-- ── KPI strip ──────────────────────────────────────────────────── -->
+  @if (!loading()) {
+    <div class="kpi-strip">
+      <button class="kpi-card" [class.kpi-card--active]="selectedStatus() === null"
+              type="button" (click)="selectStatus(null)">
+        <span class="kpi-value">{{ kpiCounts().all }}</span>
+        <span class="kpi-label">Total</span>
+      </button>
+      <button class="kpi-card" [class.kpi-card--active]="selectedStatus() === 'DRAFT' || selectedStatus() === 'SENT'"
+              type="button" (click)="selectStatus('SENT')">
+        <span class="kpi-value kpi-value--info">{{ kpiCounts().open }}</span>
+        <span class="kpi-label">Abiertas</span>
+      </button>
+      <button class="kpi-card" [class.kpi-card--active]="selectedStatus() === 'PARTIAL'"
+              type="button" (click)="selectStatus('PARTIAL')">
+        <span class="kpi-value kpi-value--warn">{{ kpiCounts().partial }}</span>
+        <span class="kpi-label">Parciales</span>
+      </button>
+      <button class="kpi-card" [class.kpi-card--active]="selectedStatus() === 'RECEIVED'"
+              type="button" (click)="selectStatus('RECEIVED')">
+        <span class="kpi-value kpi-value--ok">{{ kpiCounts().received }}</span>
+        <span class="kpi-label">Recibidas</span>
+      </button>
+    </div>
+  }
+
+  <!-- ── Status chips ───────────────────────────────────────────────── -->
+  @if (!loading() && orders().length > 0) {
+    <div class="filter-bar" role="group" aria-label="Filtrar por estado">
+      @for (opt of STATUS_FILTERS; track opt.status) {
+        <button
+          class="chip"
+          [class.chip--active]="selectedStatus() === opt.status"
+          type="button"
+          (click)="selectStatus(opt.status)">
+          {{ opt.label }}
+        </button>
+      }
+    </div>
+  }
+
+  <!-- ── Action error ───────────────────────────────────────────────── -->
+  @if (actionError()) {
+    <div class="error-banner" role="alert">{{ actionError() }}</div>
+  }
+
+  <!-- ── Error ──────────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">{{ error() }}</div>
+  }
+
+  <!-- ── Loading skeleton ───────────────────────────────────────────── -->
+  @if (loading()) {
+    <div class="table-wrap" aria-busy="true">
+      <table class="po-table">
+        <thead>
+          <tr><th>N° OC</th><th>Proveedor</th><th>Estado</th>
+              <th>F. esperada</th><th class="col-num">Total</th><th>Creada</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (s of [1,2,3]; track s) {
+            <tr class="skeleton-row">
+              <td><span class="skel skel--oc"></span></td>
+              <td><span class="skel skel--name"></span></td>
+              <td><span class="skel skel--badge"></span></td>
+              <td><span class="skel skel--date"></span></td>
+              <td><span class="skel skel--num"></span></td>
+              <td><span class="skel skel--date"></span></td>
+              <td></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+  <!-- ── Empty state ────────────────────────────────────────────────── -->
+  @if (!loading() && orders().length === 0 && !error()) {
+    <div class="empty-state" role="status">
+      <div class="empty-icon" aria-hidden="true">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <polyline points="14 2 14 8 20 8"/>
+          <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+          <polyline points="10 9 9 9 8 9"/>
+        </svg>
+      </div>
+      <p class="empty-title">Sin órdenes de compra</p>
+      <p class="empty-sub">Crea la primera OC para registrar pedidos a proveedores.</p>
+      <button class="btn-add btn-add--md" type="button" (click)="openCreate()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Nueva OC
+      </button>
+    </div>
+  }
+
+  <!-- ── Table ──────────────────────────────────────────────────────── -->
+  @if (!loading() && filtered().length > 0) {
+    <div class="table-wrap">
+      <table class="po-table">
+        <thead>
+          <tr>
+            <th scope="col">N° OC</th>
+            <th scope="col">Proveedor</th>
+            <th scope="col">Estado</th>
+            <th scope="col">F. esperada</th>
+            <th scope="col" class="col-num">Total S/</th>
+            <th scope="col">Creada</th>
+            <th scope="col" class="col-actions"><span class="sr-only">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (order of filtered(); track order.id; let i = $index) {
+
+            <!-- Main row -->
+            <tr
+              class="po-row"
+              [class.po-row--expanded]="expandedId() === order.id"
+              [style.--idx]="animIdx(i)"
+              role="button"
+              tabindex="0"
+              (click)="toggleExpand(order)"
+              (keydown.enter)="toggleExpand(order)"
+              (keydown.space)="toggleExpand(order); $event.preventDefault()"
+              [attr.aria-expanded]="expandedId() === order.id">
+
+              <td class="cell-oc">{{ order.orderNumber }}</td>
+
+              <td class="cell-supplier">
+                <span class="supplier-name">{{ order.supplierName }}</span>
+                @if (order.supplierRuc) {
+                  <span class="supplier-ruc">RUC {{ order.supplierRuc }}</span>
+                }
+              </td>
+
+              <td>
+                <span class="status-badge" [attr.data-color]="STATUS_COLOR[order.status]">
+                  {{ STATUS_LABEL[order.status] }}
+                </span>
+              </td>
+
+              <td class="cell-date">
+                @if (order.expectedAt) {
+                  {{ order.expectedAt | date:'dd/MM/yyyy' }}
+                } @else {
+                  <span class="no-val">—</span>
+                }
+              </td>
+
+              <td class="cell-num">
+                @if (order.totalAmount) {
+                  S/ {{ order.totalAmount | number:'1.2-2' }}
+                } @else {
+                  <span class="no-val">—</span>
+                }
+              </td>
+
+              <td class="cell-date">{{ order.audit.createdAt | date:'dd/MM/yy' }}</td>
+
+              <td class="cell-actions" (click)="$event.stopPropagation()">
+                <div class="row-actions">
+                  @if (order.status === 'DRAFT') {
+                    <button class="action-btn action-btn--primary" type="button"
+                            title="Enviar OC al proveedor"
+                            [disabled]="actionLoading()"
+                            (click)="sendOrder(order)">
+                      Enviar
+                    </button>
+                  }
+                  @if (order.status === 'SENT' || order.status === 'PARTIAL') {
+                    <button class="action-btn action-btn--primary" type="button"
+                            title="Registrar recepción"
+                            (click)="openReceive(order)">
+                      Recibir
+                    </button>
+                  }
+                  @if (order.status === 'DRAFT' || order.status === 'SENT') {
+                    <button class="action-btn action-btn--danger" type="button"
+                            title="Cancelar OC"
+                            [disabled]="actionLoading()"
+                            (click)="cancelOrder(order)">
+                      Cancelar
+                    </button>
+                  }
+                  <button
+                    class="expand-btn"
+                    [class.expand-btn--open]="expandedId() === order.id"
+                    type="button"
+                    [attr.aria-label]="expandedId() === order.id ? 'Cerrar ítems' : 'Ver ítems'"
+                    (click)="toggleExpand(order)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Items expand row -->
+            @if (expandedId() === order.id) {
+              <tr class="items-row" aria-live="polite">
+                <td colspan="7" class="items-cell">
+                  <div class="items-content">
+                    @if (!order.items || order.items.length === 0) {
+                      <p class="items-empty">Esta orden no tiene ítems cargados.</p>
+                    } @else {
+                      <div class="items-grid">
+                        <span class="items-hd">Repuesto</span>
+                        <span class="items-hd col-num">Ordenado</span>
+                        <span class="items-hd col-num">Recibido</span>
+                        <span class="items-hd col-num">Pendiente</span>
+                        <span class="items-hd col-num">Costo u.</span>
+
+                        @for (item of order.items; track item.id) {
+                          <span class="item-name">{{ repuestoName(item.repuestoId) }}</span>
+                          <span class="item-num">{{ item.quantityOrdered }}</span>
+                          <span class="item-num">{{ item.quantityReceived }}</span>
+                          <span class="item-num" [class.item-num--pending]="item.quantityPending > 0">
+                            {{ item.quantityPending }}
+                          </span>
+                          <span class="item-num item-num--muted">
+                            @if (item.unitCost) { S/ {{ item.unitCost | number:'1.2-2' }} }
+                            @else { — }
+                          </span>
+                        }
+                      </div>
+                    }
+                    @if (order.notes) {
+                      <p class="items-notes">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+                          <line x1="12" y1="16" x2="12.01" y2="16"/>
+                        </svg>
+                        {{ order.notes }}
+                      </p>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════════════════
+     CREATE DIALOG
+     ════════════════════════════════════════════════════════════════ -->
+<dialog #createDialog class="form-dialog" aria-labelledby="create-po-title">
+  <div class="fd-layout">
+
+    <div class="fd-header">
+      <h2 class="fd-title" id="create-po-title">Nueva orden de compra</h2>
+      <button class="fd-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fd-body">
+
+      <div class="fd-section">
+        <p class="fd-section-label">Proveedor</p>
+        <div class="fd-field">
+          <label class="m-label" for="po-supplier">Nombre <span class="req" aria-hidden="true">*</span></label>
+          <input id="po-supplier" class="m-input" type="text" placeholder="Nombre del proveedor"
+                 [(ngModel)]="createForm.supplierName" name="supplierName" required autocomplete="off">
+        </div>
+        <div class="fd-row-2">
+          <div class="fd-field">
+            <label class="m-label" for="po-ruc">RUC</label>
+            <input id="po-ruc" class="m-input" type="text" placeholder="20123456789" maxlength="11"
+                   [(ngModel)]="createForm.supplierRuc" name="supplierRuc">
+          </div>
+          <div class="fd-field">
+            <label class="m-label" for="po-expected">Fecha esperada</label>
+            <input id="po-expected" class="m-input" type="date"
+                   [(ngModel)]="createForm.expectedAt" name="expectedAt">
+          </div>
+        </div>
+        <div class="fd-field">
+          <label class="m-label" for="po-notes">Notas</label>
+          <textarea id="po-notes" class="m-input m-textarea" rows="2"
+                    placeholder="Instrucciones o condiciones especiales"
+                    [(ngModel)]="createForm.notes" name="notes" maxlength="1000"></textarea>
+        </div>
+      </div>
+
+      <div class="fd-divider"></div>
+
+      <div class="fd-section">
+        <div class="items-header">
+          <p class="fd-section-label">Ítems <span class="req" aria-hidden="true">*</span></p>
+          <button class="btn-add-item" type="button" (click)="addItem()">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Agregar ítem
+          </button>
+        </div>
+
+        @for (item of createItems(); track $index; let i = $index) {
+          <div class="item-row-form">
+            <div class="item-row-fields">
+              <div class="fd-field">
+                <label class="m-label" [for]="'po-rep-' + i">Repuesto <span class="req" aria-hidden="true">*</span></label>
+                <select [id]="'po-rep-' + i" class="m-input"
+                        [(ngModel)]="item.repuestoId" [name]="'rep' + i" required>
+                  <option value="" disabled>Selecciona el repuesto</option>
+                  @for (r of repuestos(); track r.id) {
+                    <option [value]="r.id">{{ r.sku }} — {{ r.name }}</option>
+                  }
+                </select>
+              </div>
+              <div class="fd-field fd-field--sm">
+                <label class="m-label" [for]="'po-qty-' + i">Cantidad</label>
+                <input [id]="'po-qty-' + i" class="m-input" type="number" min="1"
+                       [(ngModel)]="item.quantityOrdered" [name]="'qty' + i">
+              </div>
+              <div class="fd-field fd-field--sm">
+                <label class="m-label" [for]="'po-cost-' + i">Costo u. (S/)</label>
+                <input [id]="'po-cost-' + i" class="m-input" type="number" min="0" step="0.01"
+                       [(ngModel)]="item.unitCost" [name]="'cost' + i">
+              </div>
+            </div>
+            @if (createItems().length > 1) {
+              <button class="btn-remove-item" type="button"
+                      [attr.aria-label]="'Eliminar ítem ' + (i + 1)"
+                      (click)="removeItem(i)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            }
+          </div>
+        }
+      </div>
+
+      @if (createError()) {
+        <div class="fd-error" role="alert">{{ createError() }}</div>
+      }
+
+    </div>
+
+    <div class="fd-footer">
+      <button class="m-btn m-btn--ghost" type="button" (click)="closeCreate()">Cancelar</button>
+      <button class="m-btn m-btn--primary" type="button"
+              (click)="submitCreate()"
+              [disabled]="createSubmitting() || !canCreateValid()">
+        @if (createSubmitting()) {
+          <span class="btn-spinner" aria-hidden="true"></span> Creando…
+        } @else {
+          Crear OC
+        }
+      </button>
+    </div>
+
+  </div>
+</dialog>
+
+
+<!-- ════════════════════════════════════════════════════════════════════
+     RECEIVE DIALOG
+     ════════════════════════════════════════════════════════════════ -->
+<dialog #receiveDialog class="form-dialog" aria-labelledby="receive-dialog-title">
+  <div class="fd-layout">
+
+    <div class="fd-header">
+      <div class="col-g4">
+        <h2 class="fd-title" id="receive-dialog-title">Registrar recepción</h2>
+        @if (receiveTarget()) {
+          <span class="fd-subtitle">{{ receiveTarget()!.orderNumber }} · {{ receiveTarget()!.supplierName }}</span>
+        }
+      </div>
+      <button class="fd-close" type="button" (click)="closeReceive()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="fd-body">
+
+      <div class="fd-section">
+        <div class="fd-field">
+          <label class="m-label" for="recv-wh">Almacén destino <span class="req" aria-hidden="true">*</span></label>
+          <select id="recv-wh" class="m-input"
+                  [ngModel]="receiveWarehouseId()"
+                  (ngModelChange)="receiveWarehouseId.set($event)"
+                  name="recvWh" required>
+            <option value="" disabled>Selecciona el almacén</option>
+            @for (wh of warehouses(); track wh.id) {
+              <option [value]="wh.id">{{ wh.name }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="fd-divider"></div>
+
+      <div class="fd-section">
+        <p class="fd-section-label">Ítems pendientes</p>
+        @for (row of receiptRows(); track row.itemId) {
+          <div class="receipt-row">
+            <div class="receipt-info">
+              <span class="receipt-name">{{ row.repuestoName }}</span>
+              <span class="receipt-pending">Pendiente: {{ row.quantityPending }}</span>
+            </div>
+            <div class="fd-field fd-field--sm">
+              <label class="m-label" [for]="'recv-' + row.itemId">Recibir</label>
+              <input [id]="'recv-' + row.itemId" class="m-input" type="number"
+                     min="0" [max]="row.quantityPending"
+                     [(ngModel)]="row.inputQty" [name]="'recv' + row.itemId">
+            </div>
+          </div>
+        }
+        @if (receiptRows().length === 0) {
+          <p class="fd-hint">Todos los ítems ya han sido recibidos.</p>
+        }
+      </div>
+
+      @if (receiveError()) {
+        <div class="fd-error" role="alert">{{ receiveError() }}</div>
+      }
+
+    </div>
+
+    <div class="fd-footer">
+      <button class="m-btn m-btn--ghost" type="button" (click)="closeReceive()">Cancelar</button>
+      <button class="m-btn m-btn--primary" type="button"
+              (click)="submitReceive()"
+              [disabled]="receiveSubmitting() || !receiveWarehouseId() || receiptRows().length === 0">
+        @if (receiveSubmitting()) {
+          <span class="btn-spinner" aria-hidden="true"></span> Registrando…
+        } @else {
+          Confirmar recepción
+        }
+      </button>
+    </div>
+
+  </div>
+</dialog>

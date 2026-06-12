@@ -1,0 +1,150 @@
+<!-- ── Header ─────────────────────────────────────────────── -->
+<div class="section-header">
+  <h2 class="section-title">Facturación electrónica</h2>
+  <p class="section-desc">
+    Datos tributarios de la tienda y credenciales del facturador electrónico (OSE/SUNAT).
+  </p>
+</div>
+
+@if (loading()) {
+  <div class="skel-form">
+    @for (s of [1,2,3,4,5,6]; track s) {
+      <div class="skel-field">
+        <span class="skel skel--label"></span>
+        <span class="skel skel--input"></span>
+      </div>
+    }
+  </div>
+}
+
+@if (!loading()) {
+  <form class="billing-form" (ngSubmit)="save()" #bf="ngForm" novalidate>
+
+    <!-- ── Datos tributarios ─────────────────────────────── -->
+    <fieldset class="form-section">
+      <legend class="section-legend">Datos tributarios</legend>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="bc-ruc">RUC</label>
+          <input id="bc-ruc" class="field-input" type="text" name="ruc"
+                 placeholder="20123456789" maxlength="11"
+                 pattern="[0-9]{11}"
+                 [(ngModel)]="form.ruc">
+          <span class="field-hint">11 dígitos</span>
+        </div>
+
+        <div class="field field--wide">
+          <label class="field-label" for="bc-razon">Razón social</label>
+          <input id="bc-razon" class="field-input" type="text" name="razonSocial"
+                 placeholder="MOTO PERU SAC"
+                 [(ngModel)]="form.razonSocial">
+        </div>
+
+        <div class="field field--full">
+          <label class="field-label" for="bc-dir">Dirección fiscal</label>
+          <input id="bc-dir" class="field-input" type="text" name="direccionFiscal"
+                 placeholder="Av. Lima 123, Lima, Lima"
+                 [(ngModel)]="form.direccionFiscal">
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- ── Series de comprobantes ────────────────────────── -->
+    <fieldset class="form-section">
+      <legend class="section-legend">Series de comprobantes</legend>
+
+      <div class="field-grid">
+        <div class="field">
+          <label class="field-label" for="bc-boleta">Serie boleta</label>
+          <input id="bc-boleta" class="field-input" type="text" name="boletaSerie"
+                 placeholder="B001" maxlength="10"
+                 [(ngModel)]="form.boletaSerie">
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="bc-factura">Serie factura</label>
+          <input id="bc-factura" class="field-input" type="text" name="facturaSerie"
+                 placeholder="F001" maxlength="10"
+                 [(ngModel)]="form.facturaSerie">
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- ── Facturador electrónico ─────────────────────────── -->
+    <fieldset class="form-section">
+      <legend class="section-legend">Facturador electrónico</legend>
+
+      <div class="field-grid">
+        <div class="field field--wide">
+          <label class="field-label" for="bc-provider">Proveedor</label>
+          <select id="bc-provider" class="field-select" name="facturadorProvider"
+                  [(ngModel)]="form.facturadorProvider">
+            @for (p of PROVIDERS; track p.value) {
+              <option [value]="p.value">{{ p.label }}</option>
+            }
+          </select>
+        </div>
+
+        @if (form.facturadorProvider) {
+          <div class="field field--full">
+            <label class="field-label" for="bc-apiurl">URL del API</label>
+            <input id="bc-apiurl" class="field-input" type="url" name="facturadorApiUrl"
+                   placeholder="https://api.nubefact.com/v1"
+                   [(ngModel)]="form.facturadorApiUrl">
+          </div>
+
+          <div class="field field--full">
+            <label class="field-label" for="bc-apikey">API Key / Token</label>
+            <div class="secret-wrap">
+              <input id="bc-apikey" class="field-input field-input--secret"
+                     [type]="revealApiKey() ? 'text' : 'password'"
+                     name="facturadorApiKey" autocomplete="new-password"
+                     placeholder="Dejar vacío para no cambiar"
+                     [(ngModel)]="form.facturadorApiKey">
+              <button class="reveal-btn" type="button"
+                      (click)="revealApiKey.set(!revealApiKey())"
+                      [attr.aria-label]="revealApiKey() ? 'Ocultar clave' : 'Mostrar clave'">
+                @if (revealApiKey()) {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                    <line x1="1" y1="1" x2="23" y2="23"/>
+                  </svg>
+                } @else {
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                }
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </fieldset>
+
+    <!-- ── Footer ────────────────────────────────────────── -->
+    <div class="form-footer">
+      @if (error()) {
+        <span class="save-error" role="alert">{{ error() }}</span>
+      }
+      @if (saveOk()) {
+        <span class="save-ok" role="status">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          Guardado
+        </span>
+      }
+      <button class="btn-save" type="submit" [disabled]="saving()">
+        @if (saving()) { <span class="spinner spinner--white"></span> Guardando… }
+        @else { Guardar configuración }
+      </button>
+    </div>
+
+  </form>
+}

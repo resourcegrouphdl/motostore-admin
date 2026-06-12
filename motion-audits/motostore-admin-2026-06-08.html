@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MotoStore Admin — Motion Audit 2026-06-08</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Familjen+Grotesk:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    /* ── tokens ── */
+    :root {
+      --ink:       oklch(0.145 0.008 255);
+      --paper:     oklch(0.965 0.004 255);
+      --paper-dim: oklch(0.88  0.005 255);
+      --surface-2: oklch(0.185 0.007 255);
+      --border:    oklch(0.28  0.006 255);
+      --dim:       oklch(0.52  0.006 255);
+      --accent:    oklch(0.965 0.004 255);
+      --accent-soft: oklch(0.22 0.007 255);
+      --c-crit:    oklch(0.655 0.185 25);
+      --c-imp:     oklch(0.805 0.125 78);
+      --c-opp:     oklch(0.745 0.135 152);
+      --c-crit-l:  oklch(0.52  0.185 25);
+      --c-imp-l:   oklch(0.62  0.125 78);
+      --c-opp-l:   oklch(0.50  0.135 152);
+      --t-good:    oklch(0.745 0.135 152);
+      --t-mid:     oklch(0.805 0.125 78);
+      --t-slow:    oklch(0.655 0.185 25);
+      --font-disp: 'Familjen Grotesk', system-ui, sans-serif;
+      --font-body: 'Public Sans', system-ui, sans-serif;
+      --font-mono: 'Geist Mono', 'Fira Code', ui-monospace, monospace;
+      --st-bg: oklch(0.145 0.008 255);
+      --st-fg: oklch(0.940 0.004 255);
+      --st-line: oklch(0.28 0.006 255);
+      --st-dim: oklch(0.55 0.005 255);
+    }
+    :root:has(#theme-light:checked) {
+      --ink:       oklch(0.965 0.004 255);
+      --paper:     oklch(0.145 0.008 255);
+      --paper-dim: oklch(0.22  0.007 255);
+      --surface-2: oklch(0.94  0.005 255);
+      --border:    oklch(0.78  0.006 255);
+      --dim:       oklch(0.50  0.006 255);
+      --accent:    oklch(0.145 0.008 255);
+      --accent-soft: oklch(0.93 0.005 255);
+      --c-crit:    oklch(0.52  0.185 25);
+      --c-imp:     oklch(0.62  0.125 78);
+      --c-opp:     oklch(0.50  0.135 152);
+      --st-bg: oklch(0.985 0.003 255);
+      --st-fg: oklch(0.180 0.006 255);
+      --st-line: oklch(0.88 0.004 255);
+      --st-dim: oklch(0.55 0.005 255);
+    }
+
+    /* ── reset + layout ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; }
+    body {
+      background: var(--ink); color: var(--paper);
+      font-family: var(--font-body); font-size: 14px; line-height: 1.6;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 48px 24px 80px; }
+
+    /* ── theme toggle ── */
+    .theme-switch {
+      display: flex; justify-content: flex-end; margin-bottom: 40px;
+    }
+    .seg {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    }
+    .seg label {
+      padding: 5px 14px; font-size: 12px; font-family: var(--font-mono);
+      color: var(--dim); cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    .seg label:hover { color: var(--paper); }
+    #theme-dark:checked  ~ .wrap .seg label[for="theme-dark"],
+    #theme-light:checked ~ .wrap .seg label[for="theme-light"] {
+      background: var(--surface-2); color: var(--paper);
+    }
+    input.vh { position: absolute; opacity: 0; pointer-events: none; }
+
+    /* ── header ── */
+    .eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--dim); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 10px; }
+    h1.title { font-family: var(--font-disp); font-size: 32px; font-weight: 700; line-height: 1.15; color: var(--paper); margin-bottom: 12px; }
+    p.lede { font-size: 15px; color: var(--dim); max-width: 660px; margin-bottom: 22px; line-height: 1.65; }
+    .meta-row { font-family: var(--font-mono); font-size: 12px; color: var(--dim); margin-bottom: 28px; }
+    .meta-row span + span::before { content: ' · '; }
+
+    .stats { display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 48px; }
+    .stat { display: flex; flex-direction: column; gap: 2px; }
+    .stat-num { font-family: var(--font-disp); font-size: 28px; font-weight: 700; line-height: 1; }
+    .stat-num--crit { color: var(--c-crit); }
+    .stat-num--imp  { color: var(--c-imp); }
+    .stat-num--opp  { color: var(--c-opp); }
+    .stat-num--total { color: var(--paper); }
+    .stat-label { font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ── assessment ── */
+    section.assessment { margin-bottom: 52px; padding: 24px 28px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+    .mono-label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); margin-bottom: 10px; }
+    .assess-body { font-size: 16px; line-height: 1.7; color: var(--paper); font-family: var(--font-disp); }
+
+    /* ── lens table ── */
+    .section-title { font-family: var(--font-disp); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-bottom: 16px; }
+    .lens-table { width: 100%; border-collapse: collapse; margin-bottom: 52px; }
+    .lens-table th { text-align: left; padding: 9px 12px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.07em; border-bottom: 1px solid var(--border); }
+    .lens-table td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: top; transition: border-color 0.2s ease; }
+    .lens-table tr:last-child td { border-bottom: none; }
+    .lens-name { font-family: var(--font-disp); font-size: 14px; font-weight: 600; color: var(--paper); }
+    .lens-handle { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+    .weight-chip {
+      display: inline-block; padding: 2px 8px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px;
+      background: var(--surface-2); color: var(--dim); margin-left: 6px; vertical-align: middle;
+    }
+    .verdict-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; }
+    .verdict-dot--concern  { background: var(--c-imp); }
+    .verdict-dot--problem  { background: var(--c-crit); }
+    .verdict-dot--strong   { background: var(--c-opp); }
+    .verdict-dot--mixed    { background: var(--dim); }
+    .verdict-text { font-family: var(--font-mono); font-size: 12px; color: var(--paper); }
+    .one-line { font-size: 13px; color: var(--dim); line-height: 1.5; }
+
+    /* ── timing diagram ── */
+    .timing-section { margin-bottom: 52px; }
+    .timing-grid { display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start; }
+    .timing-svg { width: 100%; height: auto; }
+    .timing-key { display: flex; flex-direction: column; gap: 10px; padding-top: 16px; }
+    .timing-key-item { display: flex; align-items: flex-start; gap: 10px; }
+    .timing-key-dot { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 10px; font-weight: 700; flex-shrink: 0; margin-top: 1px; }
+    .timing-key-label { font-size: 12px; color: var(--paper); line-height: 1.4; }
+    .timing-key-mono { font-family: var(--font-mono); font-size: 11px; color: var(--dim); }
+    .timing-note { margin-top: 16px; padding: 12px 16px; background: var(--surface-2); border-radius: 8px; font-size: 12.5px; color: var(--dim); line-height: 1.5; }
+
+    /* ── lens sections ── */
+    .lens-sec { margin-bottom: 56px; }
+    .lens-sec__head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+    .lens-sec__head h3 { font-family: var(--font-disp); font-size: 22px; font-weight: 700; color: var(--paper); }
+    .lens-sec__weight { font-family: var(--font-mono); font-size: 11px; color: var(--dim); padding: 3px 9px; border: 1px solid var(--border); border-radius: 4px; }
+    .lens-sec__verdict { font-size: 13.5px; color: var(--dim); margin-bottom: 24px; }
+
+    .lens-block { margin-bottom: 28px; }
+    .lens-block-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--dim); margin-bottom: 12px; }
+    .lens-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .lens-list li { font-size: 13px; color: var(--dim); line-height: 1.55; padding-left: 20px; position: relative; }
+    .lens-list.good li::before { content: '✓'; position: absolute; left: 0; color: var(--c-opp); font-weight: 700; }
+    .lens-list.opp  li::before { content: '💡'; position: absolute; left: 0; }
+    .lens-list li code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-2); padding: 1px 5px; border-radius: 3px; color: var(--paper); }
+
+    .lens-take { margin-top: 20px; padding: 14px 18px; border-radius: 8px; background: var(--surface-2); font-size: 13px; color: var(--dim); line-height: 1.6; }
+    .lens-take strong { color: var(--paper); }
+
+    /* ── finding rows ── */
+    .finding-row {
+      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+      margin-bottom: 18px; display: grid; grid-template-columns: 1fr 380px; gap: 0;
+      transition: border-color 0.2s ease;
+    }
+    .finding-row[data-sev="crit"] { border-color: color-mix(in oklch, var(--c-crit) 30%, var(--border)); }
+    .finding-row[data-sev="imp"]  { border-color: color-mix(in oklch, var(--c-imp)  30%, var(--border)); }
+    .finding-row__prose { padding: 20px 22px; }
+    .find-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .sev-chip {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 700; padding: 3px 8px;
+      border-radius: 4px; text-transform: uppercase; letter-spacing: 0.07em;
+    }
+    .sev-chip--crit { background: color-mix(in oklch, var(--c-crit) 18%, transparent); color: var(--c-crit); }
+    .sev-chip--imp  { background: color-mix(in oklch, var(--c-imp)  18%, transparent); color: var(--c-imp); }
+    .lens-chip { font-family: var(--font-mono); font-size: 10px; padding: 3px 8px; border-radius: 4px; background: var(--surface-2); color: var(--dim); }
+    h4.find-title { font-family: var(--font-disp); font-size: 16px; font-weight: 700; color: var(--paper); margin-bottom: 12px; }
+    .find-body p { font-size: 13px; color: var(--dim); line-height: 1.6; margin-bottom: 10px; }
+    .find-body .label { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--dim); display: block; margin-bottom: 3px; }
+    .fix { background: var(--surface-2); border-radius: 7px; padding: 12px 14px; margin-top: 4px; }
+    .fix .label { color: var(--c-opp); }
+    .fix code { font-family: var(--font-mono); font-size: 12px; color: var(--paper); }
+    .find-loc { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-top: 10px !important; }
+    .find-loc code { background: var(--surface-2); padding: 2px 6px; border-radius: 3px; }
+
+    /* ── demo card ── */
+    .demo { background: var(--surface-2); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+    .demo__bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--border); }
+    .demo__meta { display: flex; flex-direction: column; gap: 2px; }
+    .demo__title  { font-family: var(--font-disp); font-size: 12px; font-weight: 600; color: var(--paper); }
+    .demo__timing { font-family: var(--font-mono); font-size: 10px; color: var(--dim); }
+    .demo__controls { display: flex; align-items: center; gap: 8px; }
+    .demo__loop { font-family: var(--font-mono); font-size: 13px; color: var(--dim); }
+    .demo__stage {
+      flex: 1; display: flex; align-items: center; justify-content: center; padding: 24px 16px;
+      min-height: 160px; background: var(--st-bg); position: relative; overflow: hidden;
+    }
+    /* stage light/dark overrides */
+    #st1-l:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st2-l:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st3-l:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st4-l:checked ~ .finding-row__prose + .demo .demo__stage {
+      --st-bg: oklch(0.985 0.003 255); --st-fg: oklch(0.180 0.006 255);
+      --st-line: oklch(0.88 0.004 255); --st-dim: oklch(0.55 0.005 255);
+    }
+    #st1-d:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st2-d:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st3-d:checked ~ .finding-row__prose + .demo .demo__stage,
+    #st4-d:checked ~ .finding-row__prose + .demo .demo__stage {
+      --st-bg: oklch(0.115 0.007 255); --st-fg: oklch(0.940 0.004 255);
+      --st-line: oklch(0.22 0.006 255); --st-dim: oklch(0.52 0.005 255);
+    }
+    /* demo stage controls seg */
+    .demo .seg label { font-size: 10px; padding: 3px 9px; }
+
+    /* ui elements used in demo cards */
+    .ui-panel {
+      background: var(--st-fg); border-radius: 8px; width: 200px; padding: 14px 12px;
+      filter: drop-shadow(0 4px 14px rgba(0,0,0,0.3));
+    }
+    .ui-panel-title { font-family: var(--font-body); font-size: 12px; font-weight: 700; color: var(--st-bg); margin-bottom: 8px; }
+    .ui-tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--st-line); margin-bottom: 10px; }
+    .ui-tab { font-family: var(--font-body); font-size: 10px; padding: 4px 9px; color: var(--st-dim); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .ui-tab.active { color: var(--st-bg); border-bottom-color: var(--st-bg); font-weight: 700; }
+    .ui-row { height: 9px; background: color-mix(in oklch, var(--st-bg) 18%, transparent); border-radius: 3px; margin-bottom: 5px; }
+    .ui-row:last-child { width: 60%; margin-bottom: 0; }
+    .ui-form { background: color-mix(in oklch, var(--st-bg) 10%, transparent); border-radius: 6px; padding: 8px; }
+    .ui-form-field { height: 7px; background: color-mix(in oklch, var(--st-bg) 20%, transparent); border-radius: 3px; margin-bottom: 5px; }
+    .ui-form-field:last-child { margin-bottom: 0; width: 70%; }
+    .ui-btn {
+      display: inline-block; padding: 5px 12px; border-radius: 5px;
+      background: var(--st-bg); font-size: 10px; font-family: var(--font-body);
+      color: var(--st-fg); font-weight: 700;
+    }
+    .ui-kpi-bar { width: 80px; height: 5px; background: color-mix(in oklch, var(--st-bg) 20%, transparent); border-radius: 3px; overflow: hidden; }
+    .ui-kpi-fill { height: 100%; background: var(--st-bg); border-radius: 3px; }
+
+    /* ── demo keyframes (inside prefers-reduced-motion: no-preference guard) ── */
+    @media (prefers-reduced-motion: no-preference) {
+      /* Finding 1: Tab content crossfade */
+      @keyframes m1 {
+        0%   { opacity: 0; transform: translateY(5px); filter: blur(3px); }
+        25%  { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+      }
+      .demo-1__mt {
+        animation: m1 3s cubic-bezier(0.16,1,0.3,1) infinite;
+      }
+
+      /* Finding 2: KPI rate bar smooth curve */
+      @keyframes m2-fill {
+        0%   { width: 12%; background: oklch(0.42 0.14 28); }
+        25%  { width: 12%; background: oklch(0.42 0.14 28); }
+        75%  { width: 55%; background: oklch(0.50 0.135 152); }
+        100% { width: 55%; background: oklch(0.50 0.135 152); }
+      }
+      .demo-2__fill {
+        animation: m2-fill 3s cubic-bezier(0.16,1,0.3,1) infinite;
+      }
+
+      /* Finding 3: Payment form enter */
+      @keyframes m3 {
+        0%   { opacity: 0; transform: translateY(8px); filter: blur(4px); }
+        30%  { opacity: 1; transform: translateY(0);   filter: blur(0); }
+        100% { opacity: 1; transform: translateY(0);   filter: blur(0); }
+      }
+      .demo-3__mt {
+        animation: m3 3s cubic-bezier(0.16,1,0.3,1) infinite;
+      }
+
+      /* Finding 4: Button :active scale */
+      @keyframes m4 {
+        0%   { transform: scale(1); }
+        20%  { transform: scale(0.97); }
+        35%  { transform: scale(1); }
+        100% { transform: scale(1); }
+      }
+      .demo-4__mt {
+        animation: m4 3s cubic-bezier(0.16,1,0.3,1) infinite;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [class*="__mt"] { animation: none !important; }
+      .demo__loop { display: none; }
+    }
+
+    /* ── rec tables ── */
+    .rec-section { margin-bottom: 48px; }
+    .tier-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.09em; margin-bottom: 8px; }
+    .tier-label--crit  { color: var(--c-crit); }
+    .tier-label--imp   { color: var(--c-imp); }
+    .tier-label--opp   { color: var(--c-opp); }
+    hr.tier-rule { border: none; border-top: 1px solid var(--border); margin-bottom: 14px; }
+    .tier-count { font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-bottom: 14px; }
+    .rec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .rec-table th { text-align: left; padding: 8px 12px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--dim); border-bottom: 1px solid var(--border); }
+    .rec-table td { padding: 11px 12px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--dim); transition: border-color 0.2s ease; }
+    .rec-table tr:last-child td { border-bottom: none; }
+    .rec-table td:first-child { width: 24px; }
+    .rec-sev { font-size: 14px; }
+    .rec-issue { font-size: 13px; color: var(--paper); }
+    .rec-file  { font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+    .rec-fix   { font-size: 12.5px; line-height: 1.5; }
+    .rec-fix code { font-family: var(--font-mono); font-size: 11px; background: var(--surface-2); padding: 1px 4px; border-radius: 3px; color: var(--paper); }
+
+    /* ── ref summary ── */
+    .ref-summary { margin-bottom: 48px; }
+    .ref-lean { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 14px; }
+    .ref-lean-item { padding: 14px 16px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); font-size: 12.5px; color: var(--dim); line-height: 1.55; }
+    .ref-lean-item strong { color: var(--paper); display: block; margin-bottom: 4px; font-family: var(--font-disp); }
+
+    /* ── footer ── */
+    footer { border-top: 1px solid var(--border); padding-top: 20px; font-family: var(--font-mono); font-size: 11px; color: var(--dim); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+
+    /* ── responsive ── */
+    @media (max-width: 860px) {
+      .finding-row { grid-template-columns: 1fr; }
+      .demo { border-left: none; border-top: 1px solid var(--border); }
+      .timing-grid { grid-template-columns: 1fr; }
+      .ref-lean { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .lens-table th:nth-child(3) { display: none; }
+      .lens-table td:nth-child(3) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<input class="vh" type="radio" name="theme" id="theme-dark"  checked>
+<input class="vh" type="radio" name="theme" id="theme-light">
+
+<div class="wrap">
+
+  <!-- Global theme switch -->
+  <div class="theme-switch">
+    <div class="seg">
+      <label for="theme-dark">Dark</label>
+      <label for="theme-light">Light</label>
+    </div>
+  </div>
+
+  <!-- ── Header ── -->
+  <p class="eyebrow">MOTION AUDIT · DESIGN-MOTION-PRINCIPLES</p>
+  <h1 class="title">MotoStore Admin — Cobranza (FE-ADMIN-010)</h1>
+  <p class="lede">
+    Módulo de gestión de cobranzas para concesionarios de motos en LATAM. Angular 19 + CSS puro,
+    sin librería de animación. El stack de motion declarado: Emil Kowalski (micro-interactions,
+    cubic-bezier(0.16,1,0.3,1)) + Jakub Krehel (@starting-style, blur+translate enter recipe).
+  </p>
+  <div class="meta-row">
+    <span>Angular 19 + CSS puro</span>
+    <span>SaaS dashboard</span>
+    <span>2026-06-08</span>
+    <span>Emil (primary) · Jakub (secondary)</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat">
+      <span class="stat-num stat-num--total">6</span>
+      <span class="stat-label">Findings</span>
+    </div>
+    <div class="stat">
+      <span class="stat-num stat-num--crit">1</span>
+      <span class="stat-label"><a href="#rec-crit" style="color:inherit;text-decoration:none;">Critical</a></span>
+    </div>
+    <div class="stat">
+      <span class="stat-num stat-num--imp">3</span>
+      <span class="stat-label"><a href="#rec-imp" style="color:inherit;text-decoration:none;">Important</a></span>
+    </div>
+    <div class="stat">
+      <span class="stat-num stat-num--opp">2</span>
+      <span class="stat-label"><a href="#rec-opp" style="color:inherit;text-decoration:none;">Opportunities</a></span>
+    </div>
+  </div>
+
+  <!-- ── Overall Assessment ── -->
+  <section class="assessment">
+    <div class="mono-label">OVERALL</div>
+    <p class="assess-body">
+      La base es sólida: el panel slide-in usa <code style="font-family:var(--font-mono);font-size:14px;background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;">cubic-bezier(0.16,1,0.3,1)</code>
+      con <code style="font-family:var(--font-mono);font-size:14px;background:rgba(255,255,255,0.07);padding:2px 6px;border-radius:4px;">@starting-style</code>, las filas de tabla tienen stagger controlado y el spinner es lineal.
+      Pero hay huecos importantes: los swaps de tab content aparecen instantáneamente sin ninguna transición
+      (motion gap crítico en UI con tabs frecuentemente usadas), el formulario de pago emerge sin animación de entrada,
+      y los botones carecen de feedback táctil de escala al presionar. El stack declarado (Emil + Jakub) está
+      parcialmente aplicado — Emil estaría satisfecho con la disciplina de duración, pero señalaría el tab swap
+      inmediato. Jakub vería el panel casi correcto pero pediría blur en la entrada. Con los fixes aplicados el
+      módulo alcanza producción sin deuda de motion.
+    </p>
+  </section>
+
+  <!-- ── 01 · Lens summary ── -->
+  <p class="section-title">01 · Resumen por lente</p>
+  <table class="lens-table">
+    <thead>
+      <tr>
+        <th>Lente</th>
+        <th>Veredicto</th>
+        <th>Lectura</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <div class="lens-name">Emil Kowalski <span class="weight-chip">Primary</span></div>
+          <div class="lens-handle">Restraint &amp; Speed</div>
+        </td>
+        <td>
+          <span class="verdict-dot verdict-dot--concern"></span>
+          <span class="verdict-text">Concern</span>
+        </td>
+        <td class="one-line">Duraciones correctas y curva buena en el panel. Falla: tab swap instantáneo y KPI bar con <code style="font-family:var(--font-mono);font-size:11px;">ease</code> a 500ms.</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="lens-name">Jakub Krehel <span class="weight-chip">Secondary</span></div>
+          <div class="lens-handle">Production Polish</div>
+        </td>
+        <td>
+          <span class="verdict-dot verdict-dot--concern"></span>
+          <span class="verdict-text">Concern</span>
+        </td>
+        <td class="one-line">@starting-style en el panel es correcto. Falta blur en la entrada del panel y el payment form carece de enter animation.</td>
+      </tr>
+      <tr>
+        <td>
+          <div class="lens-name">Jhey Tompkins <span class="weight-chip">Selective</span></div>
+          <div class="lens-handle">Experimentation &amp; Delight</div>
+        </td>
+        <td>
+          <span class="verdict-dot verdict-dot--strong"></span>
+          <span class="verdict-text">N/A</span>
+        </td>
+        <td class="one-line">SaaS dashboard — Jhey queda fuera de scope. No aplicar efectos experimentales en UI de cobranza.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- ── 02 · Timing diagram ── -->
+  <div class="timing-section">
+    <p class="section-title">02 · Dónde caen los tiempos</p>
+    <div class="timing-grid">
+      <svg class="timing-svg" viewBox="0 0 660 240" xmlns="http://www.w3.org/2000/svg">
+        <style>
+          .tband { opacity: 0.08; }
+          .tband-g { fill: oklch(0.745 0.135 152); }
+          .tband-a { fill: oklch(0.805 0.125 78); }
+          .tband-r { fill: oklch(0.655 0.185 25); }
+          .tlabel { font-family: 'Geist Mono', monospace; font-size: 9px; fill: oklch(0.52 0.006 255); }
+          .taxlabel { font-family: 'Geist Mono', monospace; font-size: 8px; fill: oklch(0.42 0.006 255); }
+          .dot-g { fill: oklch(0.745 0.135 152); }
+          .dot-a { fill: oklch(0.805 0.125 78); }
+          .dot-r { fill: oklch(0.655 0.185 25); }
+          .dot-n { fill: oklch(0.52 0.006 255); stroke: oklch(0.52 0.006 255); stroke-width: 1.5; fill: none; stroke-dasharray: 3 2; }
+          .dnum  { font-family: 'Geist Mono', monospace; font-size: 9px; font-weight: 700; fill: oklch(0.115 0.007 255); }
+          .dnum-l { fill: oklch(0.940 0.004 255); }
+          .axis  { stroke: oklch(0.28 0.006 255); stroke-width: 1; }
+        </style>
+        <!-- zone bands -->
+        <rect class="tband tband-g" x="40"  y="40" width="66"  height="140" rx="2"/>
+        <rect class="tband tband-g" x="106" y="40" width="132" height="140" rx="2"/>
+        <rect class="tband tband-a" x="238" y="40" width="132" height="140" rx="2"/>
+        <rect class="tband tband-r" x="370" y="40" width="250" height="140" rx="2"/>
+        <!-- zone labels -->
+        <text class="tlabel" x="73"  y="32">Instant</text>
+        <text class="tlabel" x="145" y="32">Responsive</text>
+        <text class="tlabel" x="270" y="32">Deliberate</text>
+        <text class="tlabel" x="400" y="32">Sluggish</text>
+        <!-- axis -->
+        <line class="axis" x1="40" y1="185" x2="620" y2="185"/>
+        <text class="taxlabel" x="40"  y="198">0</text>
+        <text class="taxlabel" x="100" y="198">100</text>
+        <text class="taxlabel" x="234" y="198">300</text>
+        <text class="taxlabel" x="366" y="198">500ms</text>
+        <!-- tick lines -->
+        <line class="axis" x1="106" y1="182" x2="106" y2="188"/>
+        <line class="axis" x1="238" y1="182" x2="238" y2="188"/>
+        <line class="axis" x1="370" y1="182" x2="370" y2="188"/>
+        <!-- dots: pos = 40 + (ms/600)*580 -->
+        <!-- ① Panel slide 300ms → x=40+290=330 -->
+        <circle cx="330" cy="90" r="12" class="dot-g"/>
+        <text class="dnum dnum-l" x="325" y="94">1</text>
+        <!-- ② Tab content: 0ms (instantáneo) → x=40 dashed -->
+        <circle cx="40" cy="120" r="12" class="dot-n"/>
+        <text class="dnum" x="35" y="124" fill="oklch(0.52 0.006 255)">2</text>
+        <!-- ③ KPI rate bar 500ms BEFORE fix → x=40+483=523 (marked as fixed) -->
+        <circle cx="370" cy="150" r="12" class="dot-a" opacity="0.4"/>
+        <text class="dnum" x="365" y="154" fill="oklch(0.12 0.006 255)" opacity="0.4">3</text>
+        <!-- ③ KPI rate bar 280ms AFTER fix → x=40+271=311 -->
+        <circle cx="311" cy="150" r="12" class="dot-g"/>
+        <text class="dnum dnum-l" x="306" y="154">3</text>
+        <!-- ④ Row enter 160ms → x=40+155=195 -->
+        <circle cx="195" cy="90" r="12" class="dot-g"/>
+        <text class="dnum dnum-l" x="190" y="94">4</text>
+        <!-- ⑤ Payment form: 0ms → x=40 dashed -->
+        <circle cx="40" cy="150" r="12" class="dot-n"/>
+        <text class="dnum" x="35" y="154" fill="oklch(0.52 0.006 255)" dy="0">5</text>
+        <!-- ⑥ Success toast 200ms → x=40+193=233 -->
+        <circle cx="233" cy="120" r="12" class="dot-g"/>
+        <text class="dnum dnum-l" x="228" y="124">6</text>
+      </svg>
+
+      <div class="timing-key">
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:oklch(0.745 0.135 152);color:#000;">1</div>
+          <div>
+            <div class="timing-key-label">Panel slide-in</div>
+            <div class="timing-key-mono">300ms · cubic-bezier(0.16,1,0.3,1) ✓</div>
+          </div>
+        </div>
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:transparent;border:2px dashed oklch(0.52 0.006 255);color:oklch(0.52 0.006 255);">2</div>
+          <div>
+            <div class="timing-key-label">Tab content swap — <span style="color:var(--c-crit)">antes: 0ms</span></div>
+            <div class="timing-key-mono">Fix: 140ms · ease-out + blur</div>
+          </div>
+        </div>
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:oklch(0.745 0.135 152);color:#000;">3</div>
+          <div>
+            <div class="timing-key-label">KPI rate bar — <span style="color:var(--c-imp)">antes: 500ms ease</span></div>
+            <div class="timing-key-mono">Fix: 280ms · cubic-bezier(0.16,1,0.3,1)</div>
+          </div>
+        </div>
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:oklch(0.745 0.135 152);color:#000;">4</div>
+          <div>
+            <div class="timing-key-label">Row enter stagger</div>
+            <div class="timing-key-mono">160ms · cubic-bezier(0.16,1,0.3,1) ✓</div>
+          </div>
+        </div>
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:transparent;border:2px dashed oklch(0.52 0.006 255);color:oklch(0.52 0.006 255);">5</div>
+          <div>
+            <div class="timing-key-label">Payment form — <span style="color:var(--c-imp)">antes: 0ms</span></div>
+            <div class="timing-key-mono">Fix: 180ms · cubic-bezier(0.16,1,0.3,1)</div>
+          </div>
+        </div>
+        <div class="timing-key-item">
+          <div class="timing-key-dot" style="background:oklch(0.745 0.135 152);color:#000;">6</div>
+          <div>
+            <div class="timing-key-label">Success toast</div>
+            <div class="timing-key-mono">200ms · ease-out + blur ✓</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="timing-note">
+      Los círculos huecos (⓶ ⑤) representan elementos sin animación detectada (0ms efectivo).
+      El punto ③ aparece duplicado — posición tachada pre-fix (500ms) y punto verde post-fix (280ms).
+    </div>
+  </div>
+
+  <!-- ── 03 · Emil Kowalski ── -->
+  <section class="lens-sec">
+    <div class="lens-sec__head">
+      <h3>Emil Kowalski — Restraint &amp; Speed</h3>
+      <span class="lens-sec__weight">Primary</span>
+    </div>
+    <p class="lens-sec__verdict">
+      <span class="verdict-dot verdict-dot--concern" style="display:inline-block;"></span>
+      Concern — disciplina de duración correcta, pero tab swap y KPI curve son regressions.
+    </p>
+
+    <div class="lens-block">
+      <div class="lens-block-label">What's working well</div>
+      <ul class="lens-list good">
+        <li>Panel usa <code>cubic-bezier(0.16,1,0.3,1)</code> en 300ms — dentro del budget Emil para overlays (<code>collection-list.component.scss:146</code>)</li>
+        <li>Row stagger capado: <code>animIdx(i) = Math.min(i, 7)</code> — no crece indefinido con listas largas (<code>collection-list.component.ts:185</code>)</li>
+        <li>Hover transitions en chips/tabla a 100–120ms — Emil aplaude velocidad aquí (<code>.chip:hover</code>)</li>
+        <li>Spinner usa <code>linear</code> — correcto para loops continuos; no usa ease que daría sensación de choppiness</li>
+      </ul>
+    </div>
+
+    <div class="lens-block">
+      <div class="lens-block-label">Issues to address</div>
+
+      <!-- Finding 1 -->
+      <input class="vh" type="radio" name="st1" id="st1-a" checked>
+      <input class="vh" type="radio" name="st1" id="st1-l">
+      <input class="vh" type="radio" name="st1" id="st1-d">
+      <div class="finding-row" data-sev="crit">
+        <div class="finding-row__prose">
+          <div class="find-tags">
+            <span class="sev-chip sev-chip--crit">Critical</span>
+            <span class="lens-chip">Emil</span>
+            <span class="lens-chip">Jakub</span>
+          </div>
+          <h4 class="find-title">Tab content swap sin transición — motion gap crítico</h4>
+          <div class="find-body">
+            <p><span class="label">What</span>
+              Al cambiar entre tabs "Cronograma" y "Pagos recibidos", el contenido swap es instantáneo.
+              El <code>@if (activeTab() === 'schedule')</code> hace destroy/recreate del DOM sin ninguna
+              animación de salida o entrada.
+            </p>
+            <p><span class="label">Why it matters</span>
+              Emil clasifica el tab switch como "occasional" (docenas/día para un asesor de cobranza).
+              Un swap instantáneo viola el principio de continuidad espacial — el usuario no tiene contexto
+              de qué tab viene ni hacia dónde va. Emil's frequency rule: ocasional → subtle, fast motion. Aquí: ninguna.
+            </p>
+            <div class="fix">
+              <p><span class="label">Recommended motion</span>
+                <code>@starting-style</code> en <code>.tab-content</code>:
+                enter con <code>opacity: 0 → 1, translateY: 5px → 0, filter: blur(3px) → 0</code>
+                en 140ms <code>ease-out</code>. Sin exit animation (Angular destruye el nodo — solo se anima el enter del nuevo).
+              </p>
+            </div>
+            <p class="find-loc"><code>collection-list.component.html:228,294</code> / <code>.scss:190</code></p>
+          </div>
+        </div>
+        <div class="demo">
+          <div class="demo__bar">
+            <div class="demo__meta">
+              <span class="demo__title">Tab content crossfade</span>
+              <span class="demo__timing">140ms · ease-out + blur(3px)</span>
+            </div>
+            <div class="demo__controls">
+              <div class="seg">
+                <label for="st1-a">Auto</label>
+                <label for="st1-l">Light</label>
+                <label for="st1-d">Dark</label>
+              </div>
+              <span class="demo__loop">↻</span>
+            </div>
+          </div>
+          <div class="demo__stage">
+            <div class="ui-panel">
+              <div class="ui-tab-bar">
+                <div class="ui-tab active">Cronograma</div>
+                <div class="ui-tab">Pagos</div>
+              </div>
+              <div class="demo-1__mt">
+                <div class="ui-row"></div>
+                <div class="ui-row" style="width:85%"></div>
+                <div class="ui-row" style="width:70%"></div>
+                <div class="ui-row"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finding 2 -->
+      <input class="vh" type="radio" name="st2" id="st2-a" checked>
+      <input class="vh" type="radio" name="st2" id="st2-l">
+      <input class="vh" type="radio" name="st2" id="st2-d">
+      <div class="finding-row" data-sev="imp">
+        <div class="finding-row__prose">
+          <div class="find-tags">
+            <span class="sev-chip sev-chip--imp">Important</span>
+            <span class="lens-chip">Emil</span>
+          </div>
+          <h4 class="find-title">KPI rate bar: easing estándar a 500ms</h4>
+          <div class="find-body">
+            <p><span class="label">What</span>
+              La barra de % recuperación usa <code>transition: width 500ms ease</code>. El <code>ease</code>
+              CSS built-in carece de fuerza y 500ms excede el budget de Emil para UI de dashboard.
+            </p>
+            <p><span class="label">Why it matters</span>
+              Emil: "Easing is the most important part of any animation." El <code>ease</code>
+              nativo es plano comparado con <code>cubic-bezier(0.16,1,0.3,1)</code> que el propio
+              código ya usa en el panel y rows. Inconsistencia de curva en el mismo componente.
+              500ms cae en "Deliberate" — Emil lo rechazaría para una métrica de KPI.
+            </p>
+            <div class="fix">
+              <p><span class="label">Recommended motion</span>
+                <code>transition: width 280ms cubic-bezier(0.16,1,0.3,1)</code>. Consistente con el
+                resto del módulo. Agregar transición de color dinámica cuando la tasa cambia
+                de ok → warn → danger: <code>background 200ms ease</code>.
+              </p>
+            </div>
+            <p class="find-loc"><code>collection-list.component.scss:24</code></p>
+          </div>
+        </div>
+        <div class="demo">
+          <div class="demo__bar">
+            <div class="demo__meta">
+              <span class="demo__title">KPI bar — curva corregida</span>
+              <span class="demo__timing">280ms · cubic-bezier(0.16,1,0.3,1)</span>
+            </div>
+            <div class="demo__controls">
+              <div class="seg">
+                <label for="st2-a">Auto</label>
+                <label for="st2-l">Light</label>
+                <label for="st2-d">Dark</label>
+              </div>
+              <span class="demo__loop">↻</span>
+            </div>
+          </div>
+          <div class="demo__stage" style="flex-direction:column;gap:6px;">
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--st-dim);margin-bottom:4px;">% RECUPERACIÓN</div>
+            <div class="ui-kpi-bar">
+              <div class="demo-2__fill ui-kpi-fill"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Finding 4 -->
+      <input class="vh" type="radio" name="st4" id="st4-a" checked>
+      <input class="vh" type="radio" name="st4" id="st4-l">
+      <input class="vh" type="radio" name="st4" id="st4-d">
+      <div class="finding-row" data-sev="imp">
+        <div class="finding-row__prose">
+          <div class="find-tags">
+            <span class="sev-chip sev-chip--imp">Important</span>
+            <span class="lens-chip">Emil</span>
+          </div>
+          <h4 class="find-title">Botones sin feedback táctil de escala</h4>
+          <div class="find-body">
+            <p><span class="label">What</span>
+              Ningún botón interactivo del módulo tiene <code>:active { transform: scale(0.97); }</code>.
+              Afecta: chips de filtro, "Registrar pago", "Confirmar pago", "Cancelar", tabs.
+            </p>
+            <p><span class="label">Why it matters</span>
+              Emil tip #1: escala al presionar da confirmación táctil inmediata de que el click
+              registró. Sin esta microinteracción el botón se siente "sin peso" — especialmente
+              crítico en "Confirmar pago" donde el asesor necesita certeza de que la acción se ejecutó.
+              Frecuencia del asesor: docenas de clicks/día → Emil recomienda la scale sin animation delay.
+            </p>
+            <div class="fix">
+              <p><span class="label">Recommended motion</span>
+                <code>button:active { transform: scale(0.97); transition: transform 80ms; }</code>
+                en todos los botones del módulo. 80ms es imperceptible en términos de latencia pero
+                suficiente para el feedback visual.
+              </p>
+            </div>
+            <p class="find-loc"><code>collection-list.component.scss:232,304,311</code></p>
+          </div>
+        </div>
+        <div class="demo">
+          <div class="demo__bar">
+            <div class="demo__meta">
+              <span class="demo__title">Button press feedback</span>
+              <span class="demo__timing">80ms · transform scale(0.97)</span>
+            </div>
+            <div class="demo__controls">
+              <div class="seg">
+                <label for="st4-a">Auto</label>
+                <label for="st4-l">Light</label>
+                <label for="st4-d">Dark</label>
+              </div>
+              <span class="demo__loop">↻</span>
+            </div>
+          </div>
+          <div class="demo__stage">
+            <div class="demo-4__mt ui-btn">Confirmar pago</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /issues -->
+
+    <div class="lens-block">
+      <div class="lens-block-label">Opportunities</div>
+      <ul class="lens-list opp">
+        <li>Row stagger capeado en 7 — reducir a 5 (<code>animIdx</code>) elimina la acumulación de delay que Emil llamaría stagger-spam en listas largas</li>
+        <li>El overlay del panel (<code>.panel-backdrop</code>) podría tener <code>transition: opacity 200ms</code> para aparecer gradualmente en vez de pop</li>
+      </ul>
+    </div>
+
+    <div class="lens-take">
+      <strong>Through Emil's lens:</strong> La arquitectura de duración es respetable — nadie añadió
+      animaciones de 800ms ni bouncing. El problema es de omisión: el tab swap diario del asesor
+      ocurre sin ningún puente visual, y la KPI bar usa la curva "de estudiante" (ease) mientras el
+      resto del módulo ya tiene la curva correcta. Aplicados los fixes, Emil daría luz verde.
+    </div>
+  </section>
+
+  <!-- ── 04 · Jakub Krehel ── -->
+  <section class="lens-sec">
+    <div class="lens-sec__head">
+      <h3>Jakub Krehel — Production Polish</h3>
+      <span class="lens-sec__weight">Secondary</span>
+    </div>
+    <p class="lens-sec__verdict">
+      <span class="verdict-dot verdict-dot--concern" style="display:inline-block;"></span>
+      Concern — @starting-style aplicado al panel, pero el formulario de pago y el success toast carecen del enter recipe.
+    </p>
+
+    <div class="lens-block">
+      <div class="lens-block-label">What's working well</div>
+      <ul class="lens-list good">
+        <li>Panel usa <code>@starting-style { transform: translateX(100%) }</code> correctamente — enters en la primera render sin JS (<code>.scss:148</code>)</li>
+        <li>Skeleton shimmer usa <code>linear</code> y fondo gradient — Jakub aprobaría el tratamiento loading state</li>
+        <li>Empty states con icono centrado — visualmente limpio, no distrae</li>
+        <li>Tab indicator usa <code>border-bottom</code> con transition de 120ms — sutil y correcto</li>
+      </ul>
+    </div>
+
+    <div class="lens-block">
+      <div class="lens-block-label">Issues to address</div>
+
+      <!-- Finding 3 -->
+      <input class="vh" type="radio" name="st3" id="st3-a" checked>
+      <input class="vh" type="radio" name="st3" id="st3-l">
+      <input class="vh" type="radio" name="st3" id="st3-d">
+      <div class="finding-row" data-sev="imp">
+        <div class="finding-row__prose">
+          <div class="find-tags">
+            <span class="sev-chip sev-chip--imp">Important</span>
+            <span class="lens-chip">Jakub</span>
+          </div>
+          <h4 class="find-title">Payment form sin enter animation (Jakub enter recipe)</h4>
+          <div class="find-body">
+            <p><span class="label">What</span>
+              Al presionar "Registrar pago", el formulario aparece instantáneamente.
+              El <code>.payment-form</code> no tiene <code>@starting-style</code> ni transición de
+              <code>opacity/transform/filter</code>.
+            </p>
+            <p><span class="label">Why it matters</span>
+              Jakub enter recipe: <code>opacity 0→1, translateY 8px→0, blur 4px→0</code> en ~180ms.
+              El blur crea el efecto "materializing" — el formulario aparece como si viniera al foco,
+              no como si parpadeara. Para un asesor que va a introducir un monto crítico (pago de mora),
+              ese microsegundo de transición da tiempo de orientación.
+            </p>
+            <div class="fix">
+              <p><span class="label">Recommended motion</span>
+                <code>@starting-style { opacity: 0; transform: translateY(8px); filter: blur(4px); }</code>
+                con <code>transition: opacity 180ms ease-out, transform 180ms cubic-bezier(0.16,1,0.3,1), filter 180ms ease-out</code>.
+                El <code>@starting-style</code> funciona en Angular porque el elemento es creado cuando
+                <code>paymentFormOpen() === true</code>.
+              </p>
+            </div>
+            <p class="find-loc"><code>collection-list.component.scss:281</code></p>
+          </div>
+        </div>
+        <div class="demo">
+          <div class="demo__bar">
+            <div class="demo__meta">
+              <span class="demo__title">Form materializing enter</span>
+              <span class="demo__timing">180ms · ease-out + blur(4px)</span>
+            </div>
+            <div class="demo__controls">
+              <div class="seg">
+                <label for="st3-a">Auto</label>
+                <label for="st3-l">Light</label>
+                <label for="st3-d">Dark</label>
+              </div>
+              <span class="demo__loop">↻</span>
+            </div>
+          </div>
+          <div class="demo__stage">
+            <div class="demo-3__mt ui-panel" style="width:190px;">
+              <div class="ui-form">
+                <div class="ui-form-field"></div>
+                <div class="ui-form-field"></div>
+                <div class="ui-form-field" style="width:55%"></div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+                <div class="ui-btn" style="font-size:9px;padding:4px 10px;">Confirmar pago</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /issues -->
+
+    <div class="lens-block">
+      <div class="lens-block-label">Opportunities</div>
+      <ul class="lens-list opp">
+        <li>Panel entry podría añadir <code>filter: blur(2px) → 0</code> a <code>@starting-style</code> para el "materializing" completo de Jakub — actualmente solo tiene translate</li>
+        <li>Success toast ya tiene <code>@starting-style</code> con blur — correcto. Considerar también la desaparición con <code>transition: opacity 150ms</code> cuando el signal vuelve a false (si Angular preserva el nodo brevemente)</li>
+      </ul>
+    </div>
+
+    <div class="lens-take">
+      <strong>Through Jakub's lens:</strong> La calidad de producción está a medio camino.
+      El panel tiene el mecanismo correcto (<code>@starting-style</code>) pero le falta el ingrediente
+      de blur que Jakub considera esencial para el "materializing" effect. El formulario de pago,
+      que es el punto de mayor tensión UX (ingresar un monto de deuda), emerge abruptamente. Con el
+      enter recipe aplicado al form y al content de tabs, el módulo alcanza el estándar Jakub de "invisible polish".
+    </div>
+  </section>
+
+  <!-- ── 05 · Jhey (N/A) ── -->
+  <section class="lens-sec">
+    <div class="lens-sec__head">
+      <h3>Jhey Tompkins — Experimentation &amp; Delight</h3>
+      <span class="lens-sec__weight">Selective</span>
+    </div>
+    <p class="lens-sec__verdict">
+      <span class="verdict-dot verdict-dot--strong" style="display:inline-block;background:var(--dim);"></span>
+      No aplicable — SaaS de cobranza. No añadir efectos experimentales.
+    </p>
+    <div class="lens-block">
+      <div class="lens-block-label">What's working well</div>
+      <ul class="lens-list good">
+        <li>La decisión de NO usar scroll-driven animations, clip-path reveals ni spring physics es correcta para este contexto</li>
+      </ul>
+    </div>
+    <div class="lens-take">
+      <strong>Through Jhey's lens:</strong> Jhey diría que hay potencial en los empty states (una pequeña
+      animación de "sin deuda" podría ser delightful) — pero para un asesor de cobranza que ve esta pantalla
+      como herramienta de trabajo diaria, la sobriedad es la decisión correcta. Mantener.
+    </div>
+  </section>
+
+  <!-- ── 06 · Combined recommendations ── -->
+  <div class="rec-section">
+    <p class="section-title">06 · Recomendaciones combinadas</p>
+
+    <div id="rec-crit">
+      <div class="tier-label tier-label--crit">Critical · debe corregirse</div>
+      <hr class="tier-rule">
+      <div class="tier-count">1 finding</div>
+      <table class="rec-table">
+        <thead><tr><th></th><th>Issue</th><th>Archivo</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="rec-sev">🔴</span></td>
+            <td class="rec-issue">Tab content swap sin animación de entrada</td>
+            <td class="rec-file">.scss:190 / .html:228</td>
+            <td class="rec-fix"><code>@starting-style</code> en <code>.tab-content</code>: opacity 0→1, translateY 5px→0, blur 3px→0 en 140ms ease-out</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="rec-imp" style="margin-top:36px;">
+      <div class="tier-label tier-label--imp">Important · debería corregirse</div>
+      <hr class="tier-rule">
+      <div class="tier-count">3 findings</div>
+      <table class="rec-table">
+        <thead><tr><th></th><th>Issue</th><th>Archivo</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="rec-sev">🟡</span></td>
+            <td class="rec-issue">KPI rate bar usa <code>ease</code> 500ms</td>
+            <td class="rec-file">.scss:24</td>
+            <td class="rec-fix"><code>transition: width 280ms cubic-bezier(0.16,1,0.3,1)</code></td>
+          </tr>
+          <tr>
+            <td><span class="rec-sev">🟡</span></td>
+            <td class="rec-issue">Payment form sin enter animation</td>
+            <td class="rec-file">.scss:281</td>
+            <td class="rec-fix"><code>@starting-style { opacity:0; transform:translateY(8px); filter:blur(4px); }</code> + transition 180ms</td>
+          </tr>
+          <tr>
+            <td><span class="rec-sev">🟡</span></td>
+            <td class="rec-issue">Botones sin :active scale feedback</td>
+            <td class="rec-file">.scss:232,304,311</td>
+            <td class="rec-fix"><code>:active { transform: scale(0.97); transition: transform 80ms; }</code> en todos los botones</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="rec-opp" style="margin-top:36px;">
+      <div class="tier-label tier-label--opp">Opportunities · podría mejorarse</div>
+      <hr class="tier-rule">
+      <div class="tier-count">2 findings</div>
+      <table class="rec-table">
+        <thead><tr><th></th><th>Enhancement</th><th>Dónde</th><th>Impacto</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="rec-sev">🟢</span></td>
+            <td class="rec-issue">Reducir cap de stagger: 7 → 5 ítems</td>
+            <td class="rec-file">.ts:185 <code>animIdx</code></td>
+            <td class="rec-fix">Elimina acumulación de delay (140ms total) en listas grandes; Emil lo aprobaría</td>
+          </tr>
+          <tr>
+            <td><span class="rec-sev">🟢</span></td>
+            <td class="rec-issue">Añadir blur al panel @starting-style</td>
+            <td class="rec-file">.scss:148</td>
+            <td class="rec-fix"><code>@starting-style { transform:translateX(100%); filter:blur(2px); }</code> — "materializing" completo Jakub</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── 07 · Lens reference summary ── -->
+  <div class="ref-summary">
+    <p class="section-title">07 · Resumen de referencia de lentes</p>
+    <p style="font-size:13px;color:var(--dim);margin-bottom:16px;">
+      Lente más referenciado: <strong style="color:var(--paper);">Emil Kowalski — Restraint &amp; Speed</strong><br>
+      Por qué: SaaS dashboard de uso diario intenso. Emil's frequency gate es la primera pregunta correcta para cada animación en este contexto.
+    </p>
+    <div class="ref-lean">
+      <div class="ref-lean-item">
+        <strong>Para seguir más a Emil</strong>
+        Eliminar el stagger de filas por completo (frecuencia muy alta = sin animación per Emil). Reducir la duración del panel de 300ms a 220ms. No añadir ninguna animación más sin pasar el frequency gate primero.
+      </div>
+      <div class="ref-lean-item">
+        <strong>Para seguir más a Jakub</strong>
+        Añadir blur al <code>@starting-style</code> del panel. Animar el cierre del panel también (exit sutil, no mirror del enter). Considerar micro-shadows en cards de pagos con <code>transition: box-shadow</code> en hover.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Footer ── -->
+  <footer>
+    <span>MotoStore Admin · Cobranza (FE-ADMIN-010)</span>
+    <span>🔴 1 Critical · 🟡 3 Important · 🟢 2 Opportunities</span>
+    <span>2026-06-08 · design-motion-principles</span>
+  </footer>
+
+</div><!-- /wrap -->
+</body>
+</html>

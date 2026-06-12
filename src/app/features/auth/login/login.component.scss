@@ -1,0 +1,263 @@
+/* ── Layout ───────────────────────────────────────────────────── */
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 24px;
+}
+
+/* ── Card ─────────────────────────────────────────────────────── */
+.login-card {
+  width: 100%;
+  max-width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3);
+  padding: 36px 32px;
+  animation: card-enter 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Brand mark ───────────────────────────────────────────────── */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 28px;
+}
+
+.brand-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--ink);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bg);
+  flex-shrink: 0;
+}
+
+.brand-name {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+/* ── Heading ──────────────────────────────────────────────────── */
+.login-heading {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.018em;
+  color: var(--ink);
+  margin: 0 0 4px;
+}
+
+.login-sub {
+  font-size: 13.5px;
+  color: var(--ink-3);
+  margin: 0 0 28px;
+}
+
+/* ── Form ─────────────────────────────────────────────────────── */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-2);
+  letter-spacing: 0.01em;
+}
+
+.field-wrap {
+  position: relative;
+}
+
+.field-input {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--ink);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  box-sizing: border-box;
+  outline: none;
+  appearance: none;
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: var(--ring);
+  }
+
+  &::placeholder {
+    color: var(--ink-3);
+  }
+
+  &.has-suffix {
+    padding-right: 42px;
+  }
+
+  &.is-error {
+    border-color: var(--danger);
+
+    &:focus {
+      box-shadow: 0 0 0 4px oklch(60% 0.21 27 / 0.14);
+    }
+  }
+}
+
+.field-suffix {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  transition: color 120ms ease;
+
+  &:hover {
+    color: var(--ink-1);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+  }
+}
+
+.field-error {
+  font-size: 12px;
+  color: var(--danger);
+  animation: error-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Alert ────────────────────────────────────────────────────── */
+.alert-error {
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 20%, var(--surface));
+  color: var(--danger);
+  font-size: 13px;
+  animation: error-enter 150ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* ── Submit button ────────────────────────────────────────────── */
+.btn-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 11px 16px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: var(--ink);
+  color: var(--bg);
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 150ms ease, transform 80ms ease;
+  margin-top: 4px;
+
+  &:hover:not(:disabled) {
+    background: var(--ink-1);
+  }
+
+  &:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(246, 245, 240, 0.3);
+  border-top-color: var(--bg);
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+}
+
+/* ── Animations ───────────────────────────────────────────────── */
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes error-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Reduced motion ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .login-card {
+    animation: none;
+  }
+
+  .field-error,
+  .alert-error {
+    animation: none;
+  }
+
+  .spinner {
+    animation: none;
+    border: 2px solid var(--bg);
+    border-radius: 50%;
+  }
+}

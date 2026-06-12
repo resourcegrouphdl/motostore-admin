@@ -1,0 +1,253 @@
+<!-- ── Step indicator ───────────────────────────────────────────── -->
+<div class="step-indicator" aria-label="Progreso del formulario">
+  <span class="step-dot" [class.step-dot--active]="step() >= 1" aria-hidden="true"></span>
+  <span class="step-line"  [class.step-line--done]="step() > 1"  aria-hidden="true"></span>
+  <span class="step-dot" [class.step-dot--active]="step() >= 2" aria-hidden="true"></span>
+  <span class="step-line"  [class.step-line--done]="step() > 2"  aria-hidden="true"></span>
+  <span class="step-dot" [class.step-dot--active]="step() >= 3" aria-hidden="true"></span>
+  <span class="step-label">Paso {{ step() }} de 3: {{ stepLabel() }}</span>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════════
+     PASO 1 — Verificar datos
+     ════════════════════════════════════════════════════════════════ -->
+@if (step() === 1) {
+  <div class="step-body" role="region" aria-label="Verificar datos de la venta">
+
+    <div class="verify-grid">
+      <div class="verify-field">
+        <span class="verify-label">Cliente</span>
+        <span class="verify-value">{{ customerName || '—' }}</span>
+      </div>
+      <div class="verify-field">
+        <span class="verify-label">Moto</span>
+        <span class="verify-value">{{ motoName || '—' }}</span>
+      </div>
+      <div class="verify-field">
+        <span class="verify-label">Monto</span>
+        <span class="verify-value verify-value--mono">S/ {{ sale.totalAmount | number:'1.2-2' }}</span>
+      </div>
+      <div class="verify-field">
+        <span class="verify-label">Fecha de entrega</span>
+        <span class="verify-value">{{ deliveryDate | date:'d MMM yyyy, HH:mm':'':'es' }} hrs</span>
+      </div>
+    </div>
+
+    <p class="verify-note">
+      Si hay algún error, cierra este panel y edita la venta antes de continuar.
+    </p>
+
+  </div>
+
+  <div class="step-footer">
+    <button class="btn-ghost" type="button" (click)="close()">Cancelar</button>
+    <button class="btn-primary" type="button" (click)="next()">
+      Datos correctos → Siguiente
+    </button>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════════
+     PASO 2 — Fotos del estado
+     ════════════════════════════════════════════════════════════════ -->
+@if (step() === 2) {
+  <div class="step-body" role="region" aria-label="Fotos del estado de la moto">
+
+    <p class="step-hint">
+      Toma las fotos directamente con la cámara. Las marcadas con
+      <span class="req-star" aria-label="obligatoria">*</span> son obligatorias.
+    </p>
+
+    <div class="photo-grid">
+      @for (slot of photoSlots(); track slot.key) {
+        <div class="photo-slot" [class.photo-slot--filled]="slot.dataUrl"
+             [class.photo-slot--required]="slot.required && !slot.dataUrl"
+             [class.photo-slot--error]="slot.error">
+
+          @if (!slot.dataUrl && !slot.uploading) {
+            <label class="photo-slot-trigger" [for]="'photo-' + slot.key"
+                   [attr.aria-label]="'Tomar foto: ' + slot.label">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="1.5" stroke-linecap="round"
+                   stroke-linejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8
+                         a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                <circle cx="12" cy="13" r="4"/>
+              </svg>
+              <span class="photo-slot-label">
+                {{ slot.label }}
+                @if (slot.required) { <span class="req-star" aria-label="obligatoria">*</span> }
+              </span>
+            </label>
+            <input [id]="'photo-' + slot.key" type="file"
+                   accept="image/*" capture="environment"
+                   class="sr-only"
+                   (change)="onPhotoSelected($event, slot.key)">
+          }
+
+          @if (slot.uploading) {
+            <div class="photo-slot-loading" aria-label="Cargando foto">
+              <span class="spinner" aria-hidden="true"></span>
+            </div>
+          }
+
+          @if (slot.dataUrl && !slot.uploading) {
+            <div class="photo-slot-preview">
+              <img [src]="slot.dataUrl" [alt]="'Foto ' + slot.label" class="photo-thumb">
+              <div class="photo-slot-overlay">
+                <span class="photo-slot-done-label">{{ slot.label }}</span>
+                <button class="photo-remove-btn" type="button"
+                        (click)="removePhoto(slot.key)"
+                        [attr.aria-label]="'Cambiar foto: ' + slot.label">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                       stroke="currentColor" stroke-width="2.5"
+                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="1 4 1 10 7 10"/>
+                    <path d="M3.51 15a9 9 0 1 0 .49-4.5"/>
+                  </svg>
+                  Cambiar
+                </button>
+              </div>
+            </div>
+          }
+
+          @if (slot.error) {
+            <p class="photo-slot-error" role="alert">{{ slot.error }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    @if (!requiredUploaded()) {
+      <p class="required-hint" role="status">
+        Faltan fotos obligatorias: Frente y Lateral der.
+      </p>
+    }
+
+  </div>
+
+  <div class="step-footer">
+    <button class="btn-ghost" type="button" (click)="back()">← Atrás</button>
+    <button class="btn-primary" type="button"
+            [disabled]="!requiredUploaded()"
+            (click)="next()">
+      Siguiente →
+    </button>
+  </div>
+}
+
+<!-- ════════════════════════════════════════════════════════════════
+     PASO 3 — Firma + Confirmar
+     ════════════════════════════════════════════════════════════════ -->
+@if (step() === 3) {
+  <div class="step-body step-body--split" role="region" aria-label="Firma y confirmación">
+
+    <!-- Columna izquierda: campos del receptor -->
+    <div class="recipient-col">
+      <div class="field">
+        <label class="field-label" for="rec-name">
+          Nombre del receptor <span class="req-star" aria-label="obligatorio">*</span>
+        </label>
+        <input id="rec-name" class="field-input"
+               type="text" name="receivedByName" autocomplete="name"
+               placeholder="Nombre completo"
+               [ngModel]="receivedByName()"
+               (ngModelChange)="receivedByName.set($event)">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="rec-dni">
+          DNI del receptor <span class="req-star" aria-label="obligatorio">*</span>
+        </label>
+        <input id="rec-dni" class="field-input"
+               type="text" name="receivedByDni" inputmode="numeric"
+               maxlength="8" placeholder="12345678"
+               [ngModel]="receivedByDni()"
+               (ngModelChange)="receivedByDni.set($event)"
+               [class.field-input--invalid]="receivedByDni().length > 0 && !isDniValid(receivedByDni())">
+        @if (receivedByDni().length > 0 && !isDniValid(receivedByDni())) {
+          <span class="field-error" role="alert">Ingresa 8 dígitos</span>
+        }
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="rec-odo">Odómetro (km)</label>
+        <input id="rec-odo" class="field-input"
+               type="number" name="odometerKm" min="0"
+               placeholder="Ej. 12"
+               [ngModel]="odometerKm()"
+               (ngModelChange)="odometerKm.set($event ? +$event : null)">
+      </div>
+
+      <div class="field">
+        <label class="field-label" for="rec-notes">Observaciones</label>
+        <textarea id="rec-notes" class="field-input field-textarea"
+                  name="notes" rows="3" maxlength="1000"
+                  placeholder="Rayones, daños previos u observaciones del cliente…"
+                  [ngModel]="notes()"
+                  (ngModelChange)="notes.set($event)"></textarea>
+      </div>
+
+      <!-- Resumen de fecha -->
+      <div class="delivery-timestamp">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round"
+             stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 16 14"/>
+        </svg>
+        Fecha de entrega: {{ deliveryDate | date:'d MMM yyyy, HH:mm':'':'es' }} hrs
+      </div>
+    </div>
+
+    <!-- Columna derecha: canvas de firma -->
+    <div class="signature-col">
+      <p class="signature-label" id="sig-label">
+        Firma del receptor
+        <span class="req-star" aria-label="obligatoria">*</span>
+      </p>
+      <p class="signature-hint">Firme con su dedo o mouse dentro del recuadro</p>
+
+      <div class="canvas-wrapper" [class.canvas-wrapper--shake]="signatureShake()"
+           [class.canvas-wrapper--signed]="!signatureEmpty()">
+        <canvas #canvas class="sig-canvas"
+                aria-label="Área de firma" aria-labelledby="sig-label"
+                role="img" tabindex="0"></canvas>
+        <div class="canvas-guide" aria-hidden="true"></div>
+        @if (!signatureEmpty()) {
+          <span class="sig-done-badge" aria-label="Firma capturada">✓</span>
+        }
+      </div>
+
+      <button class="clear-sig-btn" type="button"
+              (click)="clearSignature()"
+              [disabled]="signatureEmpty()">
+        Borrar firma
+      </button>
+    </div>
+
+  </div>
+
+  @if (error()) {
+    <div class="submit-error" role="alert">{{ error() }}</div>
+  }
+
+  <div class="step-footer step-footer--confirm">
+    <button class="btn-ghost" type="button" (click)="back()" [disabled]="submitting()">
+      ← Atrás
+    </button>
+    <div class="confirm-col">
+      <button class="btn-confirm" type="button"
+              [disabled]="!canConfirm() || submitting()"
+              (click)="signatureEmpty() ? tryAdvanceWithSignature() : submit()">
+        @if (submitting()) {
+          <span class="spinner spinner--white" aria-hidden="true"></span>
+          Registrando entrega…
+        } @else {
+          Confirmar entrega definitiva
+        }
+      </button>
+      <span class="irrev-note">Esta acción no se puede deshacer</span>
+    </div>
+  </div>
+}

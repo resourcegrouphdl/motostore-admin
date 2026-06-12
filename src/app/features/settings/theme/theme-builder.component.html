@@ -1,0 +1,289 @@
+<div class="tb-layout">
+
+  <!-- ════════════════════ LEFT — Editor ════════════════════ -->
+  <div class="tb-editor">
+
+    <div class="tb-editor-header">
+      <div class="tb-title-row">
+        <h2 class="tb-title">Apariencia de tu tienda</h2>
+        @if (isDirty()) {
+          <span class="tb-dirty-badge">
+            <span class="tb-dirty-dot"></span>Cambios sin guardar
+          </span>
+        }
+      </div>
+      <p class="tb-info-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        Los cambios se publican en tu tienda solo al hacer clic en
+        <strong>Guardar tema</strong>. El preview de abajo es solo para ti.
+      </p>
+    </div>
+
+    <!-- ── Colores ── -->
+    <section class="tb-section">
+      <h3 class="tb-section-title">Colores</h3>
+
+      <!-- Color de marca -->
+      <div class="tb-color-row">
+        <div class="tb-color-meta">
+          <span class="tb-color-label">Color de marca</span>
+          <span class="tb-color-hint">Botones y enlaces</span>
+        </div>
+        <div class="tb-color-ctrl">
+          <label class="tb-swatch-label" [class.swatch-anim]="swatchAnim() === 'primary'"
+                 title="Abrir selector de color">
+            <div class="tb-swatch-preview" [style.background]="primaryColor()"></div>
+            <input type="color" class="tb-color-native" [value]="primaryColor()"
+                   (input)="onColorPicker('primary', $event)">
+          </label>
+          <input type="text" class="tb-hex-input" [value]="primaryColor()"
+                 maxlength="7" placeholder="#000000"
+                 (input)="onHexInput('primary', $event)">
+          <span class="tb-contrast-badge"
+                [class.contrast--ok]="brandContrastOk()"
+                [class.contrast--warn]="!brandContrastOk()"
+                [title]="'Contraste con texto blanco: ' + brandContrast() + ':1 (mínimo recomendado: 4.5:1)'">
+            @if (brandContrastOk()) {
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              AA
+            } @else {
+              ⚠ {{ brandContrast() }}:1
+            }
+          </span>
+        </div>
+        @if (!brandContrastOk()) {
+          <p class="tb-contrast-warn">
+            Este color puede ser difícil de leer en botones con texto blanco.
+            Prueba un tono más oscuro (mínimo {{ brandContrast() }}:1 → necesitas 4.5:1).
+          </p>
+        }
+      </div>
+
+      <!-- Color de fondo -->
+      <div class="tb-color-row">
+        <div class="tb-color-meta">
+          <span class="tb-color-label">Color de fondo</span>
+          <span class="tb-color-hint">Fondo general de la tienda</span>
+        </div>
+        <div class="tb-color-ctrl">
+          <label class="tb-swatch-label" [class.swatch-anim]="swatchAnim() === 'background'"
+                 title="Abrir selector de color">
+            <div class="tb-swatch-preview" [style.background]="backgroundColor()"></div>
+            <input type="color" class="tb-color-native" [value]="backgroundColor()"
+                   (input)="onColorPicker('background', $event)">
+          </label>
+          <input type="text" class="tb-hex-input" [value]="backgroundColor()"
+                 maxlength="7" placeholder="#ffffff"
+                 (input)="onHexInput('background', $event)">
+        </div>
+      </div>
+
+      <!-- Color de texto -->
+      <div class="tb-color-row">
+        <div class="tb-color-meta">
+          <span class="tb-color-label">Color de texto</span>
+          <span class="tb-color-hint">Encabezados y precios</span>
+        </div>
+        <div class="tb-color-ctrl">
+          <label class="tb-swatch-label" [class.swatch-anim]="swatchAnim() === 'text'"
+                 title="Abrir selector de color">
+            <div class="tb-swatch-preview" [style.background]="textColor()"></div>
+            <input type="color" class="tb-color-native" [value]="textColor()"
+                   (input)="onColorPicker('text', $event)">
+          </label>
+          <input type="text" class="tb-hex-input" [value]="textColor()"
+                 maxlength="7" placeholder="#0f172a"
+                 (input)="onHexInput('text', $event)">
+          <span class="tb-contrast-badge"
+                [class.contrast--ok]="textContrastOk()"
+                [class.contrast--warn]="!textContrastOk()"
+                [title]="'Contraste texto/fondo: ' + textContrast() + ':1 (mínimo 4.5:1)'">
+            @if (textContrastOk()) {
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              AA
+            } @else {
+              ⚠ {{ textContrast() }}:1
+            }
+          </span>
+        </div>
+        @if (!textContrastOk()) {
+          <p class="tb-contrast-warn">
+            El texto puede ser difícil de leer sobre el fondo elegido.
+            Ajusta el color de texto o de fondo para mayor legibilidad.
+          </p>
+        }
+      </div>
+    </section>
+
+    <!-- ── Tipografía ── -->
+    <section class="tb-section">
+      <h3 class="tb-section-title">Tipografía</h3>
+      <div class="tb-font-grid">
+        @for (font of CURATED_FONTS; track font.family) {
+          <button class="tb-font-btn"
+                  [class.tb-font-btn--active]="fontFamily() === font.family"
+                  [style.font-family]="font.family + ', system-ui'"
+                  (click)="setFont(font.family)">
+            {{ font.family }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- ── Forma ── -->
+    <section class="tb-section">
+      <h3 class="tb-section-title">Forma de los elementos</h3>
+      <div class="tb-radius-row">
+        @for (preset of RADIUS_PRESETS; track preset.key) {
+          <button class="tb-radius-btn"
+                  [class.tb-radius-btn--active]="borderRadius() === preset.key"
+                  [attr.data-preset]="preset.key"
+                  (click)="borderRadius.set(preset.key)">
+            <span class="tb-radius-icon" [attr.data-preset]="preset.key"></span>
+            {{ preset.label }}
+          </button>
+        }
+      </div>
+    </section>
+
+    <!-- ── Acciones ── -->
+    <div class="tb-actions">
+      @if (isDirty() && saveState() === 'idle') {
+        <button class="tb-btn-discard" (click)="discardChanges()">
+          Descartar cambios
+        </button>
+      }
+      <button class="tb-btn-save"
+              [class.state-loading]="saveState() === 'loading'"
+              [class.state-success]="saveState() === 'success'"
+              [class.state-error]="saveState() === 'error'"
+              [disabled]="!canSave()"
+              (click)="saveTheme()">
+        <span class="btn-label">Guardar tema</span>
+        <span class="btn-spinner" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round">
+            <path d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+        </span>
+        <span class="btn-check" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </span>
+      </button>
+      @if (saveState() === 'error') {
+        <span class="tb-save-error">No se pudo guardar. Intenta nuevamente.</span>
+      }
+    </div>
+  </div>
+
+  <!-- ════════════════════ RIGHT — Mock preview ════════════════════ -->
+  <div class="tb-preview-panel">
+    <div class="tb-preview-header">
+      <h3 class="tb-preview-title">Vista previa</h3>
+    </div>
+
+    <div class="tb-mock-frame">
+      <div class="tb-mock-browser">
+        <div class="tb-mock-dots">
+          <span></span><span></span><span></span>
+        </div>
+        <span class="tb-mock-url">tutienda.motostore.com</span>
+      </div>
+
+      <!-- Mock store — CSS vars drive colors/font/radius -->
+      <div class="tb-mock-store"
+           [style.--mock-primary]="primaryColor()"
+           [style.--mock-bg]="backgroundColor()"
+           [style.--mock-ink]="textColor()"
+           [style.--mock-radius.px]="mockRadius()"
+           [style.--mock-font]="mockFont()"
+           [class.font-changing]="fontChanging()">
+
+        <!-- Nav -->
+        <nav class="tb-mk-nav">
+          <span class="tb-mk-logo">MotoStore</span>
+          <div class="tb-mk-nav-links">
+            <span>Catálogo</span>
+            <span>Crédito</span>
+            <span>Contacto</span>
+          </div>
+        </nav>
+
+        <!-- Hero -->
+        <div class="tb-mk-hero">
+          <p class="tb-mk-hero-eyebrow">Financiamiento disponible</p>
+          <h2 class="tb-mk-hero-title">Tu moto, a tu alcance</h2>
+          <p class="tb-mk-hero-sub">Cuotas desde S/ 120 al mes · Sin letra pequeña</p>
+          <div class="tb-mk-hero-ctas">
+            <button class="tb-mk-btn tb-mk-btn--primary">Ver catálogo</button>
+            <button class="tb-mk-btn tb-mk-btn--outline">Simular cuota</button>
+          </div>
+        </div>
+
+        <!-- Cards row -->
+        <div class="tb-mk-cards">
+          <div class="tb-mk-card">
+            <div class="tb-mk-card-img">
+              <svg viewBox="0 0 80 48" fill="none">
+                <ellipse cx="22" cy="36" rx="10" ry="10" stroke="currentColor" stroke-width="2"/>
+                <ellipse cx="58" cy="36" rx="10" ry="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 36 H8 L14 20 H38 L48 28 H62 L66 36" stroke="currentColor" stroke-width="2"/>
+                <path d="M38 20 L44 12 H52 L56 20" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div class="tb-mk-card-body">
+              <p class="tb-mk-card-brand">Honda</p>
+              <p class="tb-mk-card-name">CB 190R 2024</p>
+              <p class="tb-mk-card-price">S/ 8,200</p>
+              <button class="tb-mk-btn tb-mk-btn--primary tb-mk-btn--sm">Ver detalle</button>
+            </div>
+          </div>
+          <div class="tb-mk-card">
+            <div class="tb-mk-card-img">
+              <svg viewBox="0 0 80 48" fill="none">
+                <ellipse cx="22" cy="36" rx="10" ry="10" stroke="currentColor" stroke-width="2"/>
+                <ellipse cx="58" cy="36" rx="10" ry="10" stroke="currentColor" stroke-width="2"/>
+                <path d="M12 36 H8 L14 22 H40 L50 30 H62 L66 36" stroke="currentColor" stroke-width="2"/>
+                <path d="M40 22 L46 14 H54 L58 22" stroke="currentColor" stroke-width="1.5"/>
+              </svg>
+            </div>
+            <div class="tb-mk-card-body">
+              <p class="tb-mk-card-brand">Yamaha</p>
+              <p class="tb-mk-card-name">FZ 250 2024</p>
+              <p class="tb-mk-card-price">S/ 9,800</p>
+              <button class="tb-mk-btn tb-mk-btn--primary tb-mk-btn--sm">Ver detalle</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+@if (showToast()) {
+  <div class="tb-toast" [class.toast-hiding]="toastHiding()" role="status" aria-live="polite">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="10" stroke="oklch(0.50 0.17 152)"/>
+      <polyline points="20 6 9 17 4 12" stroke="oklch(0.50 0.17 152)"/>
+    </svg>
+    <div>
+      <p class="tb-toast-title">Tema guardado</p>
+      <p class="tb-toast-sub">Tu tienda se actualizará en segundos.</p>
+    </div>
+  </div>
+}

@@ -1,0 +1,137 @@
+<div class="gc-header">
+  <h2 class="gc-title">Metas del equipo</h2>
+  <div class="gc-period-wrap">
+    <label class="gc-period-label" for="period-input">Periodo</label>
+    <input id="period-input"
+           class="gc-period-input"
+           type="month"
+           [ngModel]="period()"
+           (ngModelChange)="onPeriodChange($event)" />
+  </div>
+</div>
+
+<!-- Loading -->
+@if (loading()) {
+  <div class="gc-skeleton" aria-busy="true" aria-label="Cargando metas">
+    @for (_ of [0,1,2,3]; track $index) {
+      <div class="sk-row sk-shimmer"></div>
+    }
+  </div>
+}
+
+<!-- Error -->
+@if (!loading() && error()) {
+  <p class="gc-error" role="alert">{{ error() }}</p>
+}
+
+<!-- Table -->
+@if (!loading() && !error()) {
+  @if (rows().length === 0) {
+    <p class="gc-empty">No hay vendedores activos en el equipo.</p>
+  } @else {
+    <div class="gc-table-wrap">
+      <table class="gc-table" aria-label="Metas por vendedor">
+        <thead>
+          <tr>
+            <th class="col-seller">Vendedor</th>
+            <th class="col-num">Cierres</th>
+            <th class="col-num">Contactos</th>
+            <th class="col-num">Win rate %</th>
+            <th class="col-num">Comisión %</th>
+            <th class="col-notes">Notas</th>
+            <th class="col-action"></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of rows(); track row.member.id; let i = $index) {
+            <tr class="gc-row" [style.--idx]="i">
+              <!-- Seller avatar + name -->
+              <td class="col-seller">
+                <div class="seller-cell">
+                  <div class="avatar" [style.--hue]="avatarHue(row.member.firebaseUid)">
+                    {{ initials(row.member.fullName) }}
+                  </div>
+                  <div class="seller-info">
+                    <span class="seller-name">{{ row.member.fullName }}</span>
+                    <span class="seller-role">{{ row.member.role }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Target units -->
+              <td class="col-num">
+                <input class="goal-input"
+                       type="number"
+                       min="0"
+                       [id]="'units-' + row.member.id"
+                       [(ngModel)]="row.form.targetUnits"
+                       [attr.aria-label]="'Cierres objetivo para ' + row.member.fullName" />
+              </td>
+
+              <!-- Target contacts -->
+              <td class="col-num">
+                <input class="goal-input"
+                       type="number"
+                       min="0"
+                       [id]="'contacts-' + row.member.id"
+                       [(ngModel)]="row.form.targetContacts"
+                       [attr.aria-label]="'Contactos objetivo para ' + row.member.fullName" />
+              </td>
+
+              <!-- Target win rate -->
+              <td class="col-num">
+                <input class="goal-input"
+                       type="number"
+                       min="0"
+                       max="100"
+                       step="0.1"
+                       [id]="'wr-' + row.member.id"
+                       [(ngModel)]="row.form.targetWinRate"
+                       [attr.aria-label]="'Win rate objetivo para ' + row.member.fullName" />
+              </td>
+
+              <!-- Commission rate -->
+              <td class="col-num">
+                <input class="goal-input"
+                       type="number"
+                       min="0"
+                       max="100"
+                       step="0.1"
+                       [id]="'cr-' + row.member.id"
+                       [(ngModel)]="row.form.commissionRate"
+                       [attr.aria-label]="'Comisión % para ' + row.member.fullName" />
+              </td>
+
+              <!-- Notes -->
+              <td class="col-notes">
+                <input class="goal-input goal-input--notes"
+                       type="text"
+                       maxlength="200"
+                       placeholder="Notas (opcional)"
+                       [id]="'notes-' + row.member.id"
+                       [(ngModel)]="row.form.notes"
+                       [attr.aria-label]="'Notas para ' + row.member.fullName" />
+              </td>
+
+              <!-- Save -->
+              <td class="col-action">
+                @if (row.saveErr) {
+                  <span class="save-err" role="alert">{{ row.saveErr }}</span>
+                }
+                @if (row.saved) {
+                  <span class="save-ok" aria-live="polite">Guardado ✓</span>
+                }
+                <button class="btn-save"
+                        (click)="save(row)"
+                        [disabled]="row.saving"
+                        [attr.aria-label]="'Guardar meta de ' + row.member.fullName">
+                  {{ row.saving ? '…' : 'Guardar' }}
+                </button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+}

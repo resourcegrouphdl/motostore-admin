@@ -1,0 +1,130 @@
+<div class="wa-cfg">
+
+  @if (loading()) {
+    <div class="wa-skeleton">
+      <span class="skel skel--title"></span>
+      <span class="skel skel--field"></span>
+      <span class="skel skel--field"></span>
+      <span class="skel skel--field"></span>
+    </div>
+  } @else {
+
+    <!-- Status banner -->
+    <div class="wa-status" [class.wa-status--active]="current()?.isActive">
+      <div class="status-dot" [class.status-dot--on]="current()?.isActive"></div>
+      <span>{{ current()?.isActive ? 'Conectado' : 'Sin configurar' }}</span>
+      @if (current()?.businessName) {
+        <span class="status-biz">— {{ current()!.businessName }}</span>
+      }
+    </div>
+
+    <form class="wa-form" (ngSubmit)="save()">
+
+      <div class="form-row">
+        <div class="field">
+          <label class="field-label">Nombre del negocio</label>
+          <input class="field-input" type="text" placeholder="Ej: Moto Ya Perú"
+                 [(ngModel)]="form.businessName" name="businessName"/>
+        </div>
+        <div class="field">
+          <label class="field-label">Phone Number ID</label>
+          <input class="field-input" type="text" placeholder="1234567890"
+                 [(ngModel)]="form.phoneNumberId" name="phoneNumberId"/>
+          <span class="field-hint">Desde Meta for Developers → WhatsApp → Configuración</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label class="field-label">Access Token</label>
+          <div class="secret-wrap">
+            <input class="field-input" [type]="showToken() ? 'text' : 'password'"
+                   placeholder="{{ current()?.hasAccessToken ? '••••••• (guardado)' : 'Pegar token' }}"
+                   [(ngModel)]="form.accessToken" name="accessToken"/>
+            <button type="button" class="secret-toggle" (click)="showToken.set(!showToken())">
+              @if (showToken()) {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              } @else {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+              }
+            </button>
+          </div>
+          <span class="field-hint">Solo escribe si quieres actualizarlo; déjalo vacío para conservar el actual.</span>
+        </div>
+
+        <div class="field">
+          <label class="field-label">App Secret</label>
+          <div class="secret-wrap">
+            <input class="field-input" [type]="showSecret() ? 'text' : 'password'"
+                   placeholder="{{ current()?.hasAppSecret ? '••••••• (guardado)' : 'Pegar app secret' }}"
+                   [(ngModel)]="form.appSecret" name="appSecret"/>
+            <button type="button" class="secret-toggle" (click)="showSecret.set(!showSecret())">
+              @if (showSecret()) {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19M1 1l22 22" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              } @else {
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+                </svg>
+              }
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label class="field-label">Webhook Verify Token</label>
+          <input class="field-input" type="text" placeholder="tu-token-secreto"
+                 [(ngModel)]="form.webhookVerifyToken" name="webhookVerifyToken"/>
+          <span class="field-hint">Token que registras en Meta para verificar tu webhook.</span>
+        </div>
+        <div class="field field--switch">
+          <label class="switch-label">
+            <div class="switch" [class.switch--on]="form.isActive"
+                 (click)="form.isActive = !form.isActive">
+              <div class="switch-thumb"></div>
+            </div>
+            <span>Activar integración WhatsApp</span>
+          </label>
+          <span class="field-hint">Al desactivar, los envíos de mensajes quedan en pausa.</span>
+        </div>
+      </div>
+
+      @if (error()) {
+        <p class="form-error">{{ error() }}</p>
+      }
+
+      <div class="form-actions">
+        <button class="btn-save" type="submit" [disabled]="saving()">
+          @if (saving()) {
+            <span class="spin"></span> Guardando…
+          } @else if (saveOk()) {
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M2 7l4 4 6-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Guardado
+          } @else {
+            Guardar configuración
+          }
+        </button>
+      </div>
+
+    </form>
+
+    <!-- Webhook URL info -->
+    <div class="wa-info">
+      <p class="info-title">URL del webhook</p>
+      <p class="info-url"><code>POST /api/v1/webhooks/whatsapp</code></p>
+      <p class="info-hint">Registra esta URL en Meta for Developers → WhatsApp → Configuración → Webhook. El verify token es el que configuraste arriba.</p>
+    </div>
+
+  }
+</div>

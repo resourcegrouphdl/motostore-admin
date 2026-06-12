@@ -1,0 +1,290 @@
+<!-- ── KPI strip ──────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <span class="kpi-val">{{ sales().length }}</span>
+    <span class="kpi-label">ventas</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-val">{{ completedCount() }}</span>
+    <span class="kpi-label">completadas</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-val kpi-val--revenue">S/ {{ totalRevenue() | number:'1.0-0' }}</span>
+    <span class="kpi-label">ingresos</span>
+  </div>
+  @if (voidedCount() > 0) {
+    <div class="kpi-div"></div>
+    <div class="kpi-item">
+      <span class="kpi-val kpi-val--voided">{{ voidedCount() }}</span>
+      <span class="kpi-label">anuladas</span>
+    </div>
+  }
+  <a class="btn-pos" routerLink="/sales/pos" style="margin-left:auto">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+      <line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+    </svg>
+    POS repuestos
+  </a>
+  <button class="btn-new" type="button" (click)="openCreate()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Registrar venta
+  </button>
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Table ─────────────────────────────────────────────── -->
+<div class="table-wrap">
+  <table class="sale-table">
+    <thead>
+      <tr>
+        <th scope="col">Cliente</th>
+        <th scope="col">Moto</th>
+        <th scope="col">Pago</th>
+        <th scope="col" class="col-amount">Monto</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Fecha</th>
+        <th scope="col"><span class="sr-only">Acciones</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      @if (loading()) {
+        @for (s of [1,2,3,4]; track s) {
+          <tr class="skel-row">
+            <td><span class="skel skel--name"></span></td>
+            <td><span class="skel skel--moto"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--amount"></span></td>
+            <td><span class="skel skel--badge"></span></td>
+            <td><span class="skel skel--date"></span></td>
+            <td></td>
+          </tr>
+        }
+      }
+
+      @if (!loading() && sales().length === 0 && !error()) {
+        <tr>
+          <td colspan="7">
+            <div class="empty-state">
+              <p>Sin ventas registradas.</p>
+              <button class="link-btn" type="button" (click)="openCreate()">
+                Registrar la primera venta →
+              </button>
+            </div>
+          </td>
+        </tr>
+      }
+
+      @for (sale of sales(); track sale.id; let i = $index) {
+        <tr class="sale-row" [style.--idx]="animIdx(i)"
+            [class.sale-row--voided]="sale.status === 'VOIDED'">
+
+          <td class="cell-customer">{{ customerName(sale.customerId) }}</td>
+
+          <td class="cell-moto">{{ motoName(sale.motoId) }}</td>
+
+          <td>
+            <span class="pm-badge">{{ PM_LABEL[sale.paymentMethod] }}</span>
+          </td>
+
+          <td class="cell-amount">
+            S/ {{ sale.totalAmount | number:'1.0-0' }}
+          </td>
+
+          <td>
+            <span class="status-badge" [attr.data-status]="sale.status">
+              {{ STATUS_LABEL[sale.status] }}
+            </span>
+          </td>
+
+          <td class="cell-date">
+            {{ sale.createdAt | date:'dd/MM/yy' }}
+          </td>
+
+          <td class="cell-actions">
+            @if (sale.status === 'COMPLETED') {
+              @if (!hasDelivery(sale.id)) {
+                <button class="deliver-btn" type="button" (click)="openDelivery(sale)"
+                        title="Registrar entrega al cliente">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="1" y="3" width="15" height="13"/>
+                    <path d="M16 8h4l3 3v5h-7V8z"/>
+                    <circle cx="5.5" cy="18.5" r="2.5"/>
+                    <circle cx="18.5" cy="18.5" r="2.5"/>
+                  </svg>
+                  Entrega
+                </button>
+              } @else {
+                <span class="delivered-badge" title="Entrega registrada">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Entregada
+                </span>
+              }
+              <button class="void-btn" type="button" (click)="openVoid(sale)"
+                      title="Anular venta">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+              </button>
+            }
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
+
+<!-- ── Create sale dialog ────────────────────────────────── -->
+@if (createOpen()) {
+  <div class="dialog-backdrop" (click)="closeCreate()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="createOpen()"
+       role="dialog" aria-modal="true" aria-label="Registrar venta">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Registrar venta</h2>
+    <button class="dialog-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <form class="dialog-body" (ngSubmit)="submitCreate()" #sf="ngForm" novalidate>
+
+    <!-- Cliente -->
+    <div class="field">
+      <label class="field-label" for="sv-cust">Cliente <span class="req">*</span></label>
+      <select id="sv-cust" class="field-select" name="customerId"
+              [(ngModel)]="createForm.customerId" required>
+        <option value="">— Seleccionar cliente —</option>
+        @for (c of customers(); track c.id) {
+          <option [value]="c.id">{{ c.fullName }}</option>
+        }
+      </select>
+    </div>
+
+    <!-- Moto (opcional) -->
+    <div class="field">
+      <label class="field-label" for="sv-moto">Moto vendida</label>
+      <select id="sv-moto" class="field-select" name="motoId"
+              [(ngModel)]="createForm.motoId">
+        <option value="">— Solo repuestos (sin moto) —</option>
+        @for (m of motos(); track m.id) {
+          <option [value]="m.id">{{ m.brand }} {{ m.model }} {{ m.year }} — {{ m.vin }}</option>
+        }
+      </select>
+      <span class="field-hint">Al registrar, la moto cambia a estado VENDIDA automáticamente</span>
+    </div>
+
+    <!-- Monto + Método de pago -->
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="sv-amount">Monto (S/) <span class="req">*</span></label>
+        <input id="sv-amount" class="field-input" type="number" name="totalAmount"
+               min="0" step="0.01" placeholder="0.00"
+               [(ngModel)]="createForm.totalAmount" required>
+      </div>
+      <div class="field">
+        <label class="field-label" for="sv-pm">Método de pago <span class="req">*</span></label>
+        <select id="sv-pm" class="field-select" name="paymentMethod"
+                [(ngModel)]="createForm.paymentMethod" required>
+          @for (pm of ALL_PM; track pm) {
+            <option [value]="pm">{{ PM_LABEL[pm] }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <!-- Notas -->
+    <div class="field">
+      <label class="field-label" for="sv-notes">Notas</label>
+      <textarea id="sv-notes" class="field-textarea" name="notes" rows="2"
+                placeholder="Observaciones de la venta…"
+                [(ngModel)]="createForm.notes"></textarea>
+    </div>
+
+    @if (createError()) {
+      <div class="form-error" role="alert">{{ createError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeCreate()" [disabled]="createSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit" [disabled]="sf.invalid || createSubmitting()">
+        @if (createSubmitting()) { <span class="spinner"></span> Registrando… }
+        @else { Registrar venta }
+      </button>
+    </div>
+  </form>
+</aside>
+
+<!-- ── Delivery wizard panel ─────────────────────────────── -->
+@if (deliveryTarget()) {
+  <div class="dialog-backdrop" (click)="closeDelivery()" aria-hidden="true"></div>
+}
+<aside class="side-dialog side-dialog--wide" [class.side-dialog--open]="deliveryTarget()"
+       role="dialog" aria-modal="true" aria-label="Registrar entrega de moto">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Registrar entrega de moto</h2>
+    <button class="dialog-close" type="button" (click)="closeDelivery()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="dialog-body">
+    @if (deliveryTarget()) {
+      <app-delivery-form
+        [sale]="deliveryTarget()!"
+        [customerName]="customerName(deliveryTarget()!.customerId)"
+        [motoName]="motoName(deliveryTarget()!.motoId)"
+        (closed)="closeDelivery()"
+        (delivered)="onDelivered()"
+      />
+    }
+  </div>
+</aside>
+
+<!-- ── Void confirm dialog ───────────────────────────────── -->
+@if (voidTarget()) {
+  <div class="dialog-backdrop" (click)="closeVoid()" aria-hidden="true"></div>
+  <div class="void-dialog" role="dialog" aria-modal="true" aria-label="Anular venta">
+    <h3 class="void-title">Anular venta</h3>
+    <p class="void-sub">
+      Venta de <strong>{{ customerName(voidTarget()!.customerId) }}</strong> por
+      S/ {{ voidTarget()!.totalAmount | number:'1.0-0' }}.
+      Esta acción no se puede deshacer.
+    </p>
+    <div class="field">
+      <label class="field-label" for="void-reason">Motivo de anulación <span class="req">*</span></label>
+      <textarea id="void-reason" class="field-textarea" rows="2"
+                placeholder="Error en el registro, cliente canceló…"
+                [(ngModel)]="voidReason" [ngModelOptions]="{standalone:true}"></textarea>
+    </div>
+    <div class="void-footer">
+      <button class="btn-cancel" type="button" (click)="closeVoid()">Cancelar</button>
+      <button class="btn-void" type="button"
+              (click)="submitVoid()"
+              [disabled]="!voidReason().trim() || voidSubmitting()">
+        @if (voidSubmitting()) { Anulando… } @else { Confirmar anulación }
+      </button>
+    </div>
+  </div>
+}

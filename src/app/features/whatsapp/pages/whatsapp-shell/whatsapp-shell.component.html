@@ -1,0 +1,332 @@
+<div class="wa-shell">
+
+  <!-- ── LEFT PANEL: Conversations list ──────────────────────────── -->
+  <aside class="wa-left" aria-label="Conversaciones">
+
+    <!-- Header -->
+    <div class="wa-left__head">
+      <div class="wa-left__title-row">
+        <h2 class="wa-title">WhatsApp</h2>
+        @if (realtimeActive()) {
+          <span class="realtime-dot" title="Mensajes en tiempo real" aria-label="Tiempo real activo"></span>
+        }
+        @if (unreadTotal() > 0) {
+          <span class="unread-badge" [attr.aria-label]="unreadTotal() + ' mensajes sin leer'">
+            {{ unreadTotal() > 99 ? '99+' : unreadTotal() }}
+          </span>
+        }
+      </div>
+      <div class="wa-filter-tabs" role="group" aria-label="Filtrar conversaciones">
+        <button class="wft-btn" type="button"
+                [class.wft-btn--active]="!filterUnread()"
+                (click)="filterUnread.set(false)">Todas</button>
+        <button class="wft-btn" type="button"
+                [class.wft-btn--active]="filterUnread()"
+                (click)="filterUnread.set(true)">Sin leer</button>
+      </div>
+      <div class="wa-search-wrap">
+        <svg class="wa-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input class="wa-search" type="search" placeholder="Nombre o teléfono…"
+               [value]="query()" (input)="query.set($any($event.target).value)"
+               aria-label="Buscar conversación" />
+      </div>
+    </div>
+
+    <!-- List body -->
+    <div class="wa-conv-list" role="list">
+
+      @if (loadingConvs()) {
+        @for (s of [1,2,3,4,5]; track s) {
+          <div class="conv-skel" role="listitem" aria-hidden="true">
+            <div class="skel skel--avatar"></div>
+            <div class="conv-skel__body">
+              <div class="skel skel--name"></div>
+              <div class="skel skel--preview"></div>
+            </div>
+          </div>
+        }
+      }
+
+      @if (convError()) {
+        <div class="wa-error" role="alert">
+          <span>{{ convError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryConvs()">Reintentar</button>
+        </div>
+      }
+
+      @if (!loadingConvs() && !convError() && filteredConvs().length === 0) {
+        <div class="wa-empty-list">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Sin conversaciones{{ filterUnread() ? ' sin leer' : '' }}.</span>
+        </div>
+      }
+
+      @for (conv of filteredConvs(); track trackConv($index, conv)) {
+        <button class="conv-item" type="button" role="listitem"
+                [class.conv-item--active]="selected()?.id === conv.id"
+                (click)="selectConversation(conv)"
+                [attr.aria-pressed]="selected()?.id === conv.id">
+
+          <!-- Avatar -->
+          <div class="conv-avatar" [attr.data-status]="conv.status" aria-hidden="true">
+            {{ initials(conv.clientName, conv.phone) }}
+          </div>
+
+          <!-- Content -->
+          <div class="conv-content">
+            <div class="conv-header-row">
+              <span class="conv-name">{{ conv.clientName ?? conv.phone }}</span>
+              @if (conv.lastMessageAt) {
+                <span class="conv-time">{{ conv.lastMessageAt | date:'HH:mm' }}</span>
+              }
+            </div>
+            <div class="conv-preview-row">
+              <span class="conv-preview">{{ conv.lastMessage ?? 'Sin mensajes aún' }}</span>
+              @if (conv.unreadCount > 0) {
+                <span class="conv-unread" [attr.aria-label]="conv.unreadCount + ' sin leer'">
+                  {{ conv.unreadCount > 9 ? '9+' : conv.unreadCount }}
+                </span>
+              }
+            </div>
+          </div>
+
+        </button>
+      }
+
+    </div><!-- /conv-list -->
+
+  </aside>
+
+  <!-- ── RIGHT PANEL: Chat window or empty state ─────────────────── -->
+  <div class="wa-right">
+
+    @if (!selected()) {
+      <!-- Empty state -->
+      <div class="wa-chat-empty">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <p class="wa-chat-empty__title">Selecciona una conversación</p>
+        <p class="wa-chat-empty__sub">Los mensajes aparecerán aquí.</p>
+      </div>
+    }
+
+    @if (selected(); as conv) {
+
+      <!-- Chat header -->
+      <div class="chat-header">
+        <div class="chat-header__avatar" aria-hidden="true">
+          {{ initials(conv.clientName, conv.phone) }}
+        </div>
+        <div class="chat-header__info">
+          <div class="chat-header__name">{{ conv.clientName ?? conv.phone }}</div>
+          @if (conv.clientName) {
+            <div class="chat-header__phone">{{ conv.phone }}</div>
+          }
+        </div>
+        <span class="chat-status-badge" [attr.data-status]="conv.status">
+          {{ conv.status === 'OPEN' ? 'Abierta' : 'Cerrada' }}
+        </span>
+      </div>
+
+      <!-- Messages area -->
+      <div class="chat-messages" #msgContainer>
+
+        @if (loadingMessages()) {
+          <div class="chat-loading">
+            <span class="spinner-sm"></span>
+            <span>Cargando mensajes…</span>
+          </div>
+        }
+
+        @if (msgError()) {
+          <div class="chat-error" role="alert">
+            <span>{{ msgError() }}</span>
+            <button class="btn-retry" type="button" (click)="retryMessages()">Reintentar</button>
+          </div>
+        }
+
+        @if (!loadingMessages() && !msgError() && messages().length === 0) {
+          <div class="chat-no-msgs">Inicia la conversación con un template o escribe un mensaje.</div>
+        }
+
+        @for (msg of messages(); track trackMsg($index, msg)) {
+          <div class="msg-row" [attr.data-dir]="msg.direction">
+            <div class="msg-bubble" [attr.data-dir]="msg.direction" [attr.data-type]="msg.type">
+
+              @if (msg.type === 'TEMPLATE') {
+                <span class="msg-template-tag">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  Template
+                </span>
+              }
+
+              <p class="msg-content">{{ msg.content }}</p>
+
+              <div class="msg-meta">
+                <span class="msg-time">{{ msg.createdAt | date:'HH:mm' }}</span>
+                @if (msg.direction === 'OUTBOUND') {
+                  <span class="msg-status" [attr.data-status]="msg.status"
+                        [attr.aria-label]="MESSAGE_STATUS_LABEL[msg.status]">
+                    @if (msg.status === 'READ') {
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="17 1 21 5 13 13"/><polyline points="7 13 11 17 3 9"/>
+                      </svg>
+                    } @else if (msg.status === 'DELIVERED') {
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="17 1 21 5 13 13"/><polyline points="7 13 11 17 3 9"/>
+                      </svg>
+                    } @else if (msg.status === 'SENT') {
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <polyline points="20 6 9 17 4 12"/>
+                      </svg>
+                    } @else {
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    }
+                  </span>
+                }
+              </div>
+
+            </div>
+          </div>
+        }
+
+      </div><!-- /chat-messages -->
+
+      <!-- Chat footer -->
+      <div class="chat-footer">
+
+        <!-- Template picker popover -->
+        @if (templatePickerOpen()) {
+          <div class="template-picker" role="dialog" aria-label="Seleccionar template">
+
+            @if (!selectedTemplate()) {
+              <!-- Template list -->
+              <div class="tp-head">
+                <span class="tp-title">Templates de WhatsApp</span>
+                <button class="tp-close" type="button" (click)="toggleTemplatePicker()" aria-label="Cerrar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="tp-list">
+                @for (tmpl of WA_TEMPLATES; track tmpl.name) {
+                  <button class="tp-item" type="button" (click)="pickTemplate(tmpl)">
+                    <span class="tp-item__name">{{ tmpl.displayName }}</span>
+                    <span class="tp-item__preview">{{ tmpl.body.slice(0, 60) }}…</span>
+                  </button>
+                }
+              </div>
+            } @else {
+              <!-- Template detail + variable form -->
+              <div class="tp-head">
+                <button class="tp-back" type="button" (click)="backToTemplateList()" aria-label="Volver a la lista">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="15 18 9 12 15 6"/>
+                  </svg>
+                </button>
+                <span class="tp-title">{{ selectedTemplate()!.displayName }}</span>
+                <button class="tp-close" type="button" (click)="toggleTemplatePicker()" aria-label="Cerrar">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+
+              <div class="tp-preview">{{ templatePreview(selectedTemplate()!) }}</div>
+
+              <div class="tp-vars">
+                @for (varLabel of selectedTemplate()!.variables; track $index) {
+                  <div class="tp-var-field">
+                    <label class="tp-var-label" [for]="'tv-' + ($index + 1)">{{ varLabel }}</label>
+                    <input [id]="'tv-' + ($index + 1)" class="tp-var-input" type="text"
+                           [placeholder]="varLabel"
+                           [value]="templateVars()[$index + 1 + ''] ?? ''"
+                           (input)="setTemplateVar(($index + 1) + '', $any($event.target).value)" />
+                  </div>
+                }
+              </div>
+
+              <div class="tp-footer">
+                <button class="btn-send-template" type="button"
+                        [disabled]="!allVarsFilled() || sending()"
+                        (click)="sendTemplate()">
+                  @if (sending()) { <span class="spinner-sm"></span> }
+                  Enviar template
+                </button>
+              </div>
+            }
+
+          </div>
+        }<!-- /template-picker -->
+
+        <!-- Error row -->
+        @if (sendError()) {
+          <div class="chat-send-error" role="alert">{{ sendError() }}</div>
+        }
+
+        <!-- Input row -->
+        <div class="chat-input-row">
+          <button class="btn-template-trigger" type="button"
+                  [class.btn-template-trigger--active]="templatePickerOpen()"
+                  (click)="toggleTemplatePicker()"
+                  aria-label="Usar template de WhatsApp"
+                  title="Templates">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+              <polyline points="22,6 12,13 2,6"/>
+            </svg>
+          </button>
+
+          <textarea class="chat-input" rows="1"
+                    placeholder="Escribe un mensaje… (Enter para enviar)"
+                    [value]="messageText()"
+                    (input)="messageText.set($any($event.target).value)"
+                    (keydown)="onEnterKey($event)"
+                    [disabled]="sending()"
+                    aria-label="Mensaje"></textarea>
+
+          <button class="btn-send" type="button"
+                  [disabled]="!messageText().trim() || sending()"
+                  (click)="sendMessage()" aria-label="Enviar mensaje">
+            @if (sending()) {
+              <span class="spinner-sm spinner-sm--white"></span>
+            } @else {
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            }
+          </button>
+        </div>
+
+      </div><!-- /chat-footer -->
+
+    }<!-- /if selected -->
+
+  </div><!-- /wa-right -->
+
+</div><!-- /wa-shell -->

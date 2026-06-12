@@ -1,0 +1,263 @@
+<div class="dash-page">
+
+  <!-- ── Page header ──────────────────────────────────────────────────── -->
+  <header class="dash-header">
+    <div>
+      <h1 class="dash-title">Dashboard</h1>
+      <p class="dash-date">{{ today }}</p>
+    </div>
+  </header>
+
+  <!-- ── Error ────────────────────────────────────────────────────────── -->
+  @if (error()) {
+    <div class="error-banner" role="alert">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/>
+        <line x1="12" y1="16" x2="12.01" y2="16"/>
+      </svg>
+      {{ error() }}
+    </div>
+  }
+
+  <!-- ── Alert strip ──────────────────────────────────────────────────── -->
+  @if (!loading() && dashAlerts().length > 0) {
+    <div class="dash-alert-strip" role="status" aria-label="Alertas activas">
+      @for (alert of dashAlerts(); track $index) {
+        <a class="dash-alert" [routerLink]="alert.route" [attr.data-type]="alert.type">
+          <svg class="da-icon" width="13" height="13" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            @if (alert.type === 'danger') {
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            } @else {
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            }
+          </svg>
+          {{ alert.message }}
+          <svg class="da-arrow" width="11" height="11" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </a>
+      }
+    </div>
+  }
+
+  <!-- ── KPI Cards ─────────────────────────────────────────────────────── -->
+  <section class="kpi-grid" aria-label="Indicadores clave">
+    @if (loading()) {
+      @for (s of [1,2,3,4,5,6]; track s) {
+        <div class="kpi-card kpi-card--skel">
+          <span class="skel skel--num"></span>
+          <span class="skel skel--label"></span>
+          <span class="skel skel--sub"></span>
+        </div>
+      }
+    } @else {
+      @for (kpi of kpis(); track kpi.label; let i = $index) {
+        <a class="kpi-card" [routerLink]="kpi.route" [style.--idx]="animIdx(i)" [attr.data-color]="kpi.color">
+          <span class="kpi-value">{{ kpi.value }}</span>
+          <span class="kpi-label">{{ kpi.label }}</span>
+          <span class="kpi-sub">{{ kpi.sub }}</span>
+          @if (kpi.delta !== undefined) {
+            <span class="kpi-delta" [class]="deltaClass(kpi.delta)">
+              {{ deltaSign(kpi.delta) }}{{ kpi.delta | number:'1.1-1' }}% vs mes anterior
+            </span>
+          }
+          <span class="kpi-dot" aria-hidden="true"></span>
+        </a>
+      }
+    }
+  </section>
+
+  <!-- ── Body: breakdown + accesos rápidos ────────────────────────────── -->
+  <div class="dash-body">
+
+    <!-- Inventario breakdown -->
+    <section class="breakdown-card m-card">
+      <div class="breakdown-header">
+        <h2 class="section-title">Estado del inventario</h2>
+        @if (!loading()) {
+          <span class="total-badge">{{ totalMotos() }} unidades</span>
+        }
+      </div>
+
+      @if (loading()) {
+        <div class="breakdown-list">
+          @for (s of [1,2,3,4,5]; track s) {
+            <div class="breakdown-row breakdown-row--skel">
+              <span class="skel skel--label-sm"></span>
+              <span class="skel skel--bar"></span>
+              <span class="skel skel--num-sm"></span>
+            </div>
+          }
+        </div>
+      } @else if (totalMotos() === 0) {
+        <div class="breakdown-empty">
+          <p>Sin unidades registradas.</p>
+          <a class="action-link" routerLink="/inventory/motos">Registrar primera moto →</a>
+        </div>
+      } @else {
+        <div class="breakdown-list" role="list">
+          @for (row of statusRows(); track row.status; let i = $index) {
+            <div class="breakdown-row" [style.--idx]="animIdx(i)" role="listitem">
+              <span class="row-label">{{ row.label }}</span>
+              <span class="row-bar-wrap" aria-hidden="true">
+                <span class="row-bar">
+                  <span class="row-bar-fill" [attr.data-color]="row.color" [style.width.%]="row.pct"></span>
+                </span>
+              </span>
+              <span class="row-count" [class.row-count--zero]="row.count === 0">{{ row.count }}</span>
+            </div>
+          }
+        </div>
+
+        @if (valorInventario() > 0) {
+          <div class="valor-row">
+            <span class="valor-label">Valor disponible estimado</span>
+            <span class="valor-num">S/ {{ valorInventario() | number:'1.0-0' }}</span>
+          </div>
+        }
+      }
+    </section>
+
+    <!-- Accesos rápidos -->
+    <section class="actions-card m-card">
+      <h2 class="section-title">Módulos</h2>
+      <nav class="action-list" aria-label="Módulos del sistema">
+
+        @if (loading()) {
+          @for (s of [1,2,3,4,5]; track s) {
+            <div class="action-item action-item--skel">
+              <span class="skel skel--icon"></span>
+              <span class="action-text">
+                <span class="skel skel--label-sm"></span>
+                <span class="skel skel--sub" style="margin-top:4px"></span>
+              </span>
+            </div>
+          }
+        } @else {
+          @for (action of quickActions(); track action.route; let i = $index) {
+            <a class="action-item" [routerLink]="action.route" [style.--idx]="animIdx(i)">
+              <span class="action-icon" [attr.data-color]="action.color" aria-hidden="true">
+
+                @if (action.iconKey === 'moto') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="5.5" cy="17.5" r="2.5"/><circle cx="18.5" cy="17.5" r="2.5"/>
+                    <path d="M8 17.5h7M2 12l2-7h10l2 4h3l2 3-3 1"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'sale') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'crm') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'credit') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                    <line x1="1" y1="10" x2="23" y2="10"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'collection') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="18" rx="2"/>
+                    <path d="M16 2v4M8 2v4M2 10h20"/>
+                    <path d="M8 15h2m4 0h2M8 19h2"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'analytics') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="20" x2="18" y2="10"/>
+                    <line x1="12" y1="20" x2="12" y2="4"/>
+                    <line x1="6"  y1="20" x2="6"  y2="14"/>
+                    <line x1="2"  y1="20" x2="22" y2="20"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'whatsapp') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'billing') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'workshop') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                  </svg>
+                }
+                @if (action.iconKey === 'store-orders') {
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/>
+                    <line x1="3" y1="6" x2="21" y2="6"/>
+                    <path d="M16 10a4 4 0 0 1-8 0"/>
+                  </svg>
+                }
+
+              </span>
+              <span class="action-text">
+                <span class="action-name">{{ action.label }}</span>
+                <span class="action-desc"
+                      [class.action-desc--alert]="action.iconKey === 'collection' && overdueAccounts().length > 0"
+                      [class.action-desc--warn]="(action.iconKey === 'credit'       && creditosPendientes().length > 0) ||
+                                                 (action.iconKey === 'workshop'     && otListaCount() > 0)              ||
+                                                 (action.iconKey === 'store-orders' && storeOrdersPending() > 0)">
+                  {{ action.desc }}
+                </span>
+              </span>
+              <svg class="action-arrow" width="13" height="13" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </a>
+          }
+        }
+
+      </nav>
+    </section>
+
+  </div>
+
+  <!-- ── Tendencia de ventas (mini chart) ─────────────────────────────── -->
+  @if (!loading() && miniChartBars().length > 0) {
+    <section class="trend-card m-card" aria-label="Tendencia de ventas — últimos meses">
+      <div class="trend-head">
+        <h2 class="section-title">Tendencia de ventas</h2>
+        @if (salesAnalytics(); as a) {
+          <span class="trend-summary">
+            <span class="trend-amount">{{ moneyShort(a.kpis[1].value) }}</span>
+            <span class="trend-delta" [class]="deltaClass(a.kpis[1].delta)">
+              {{ deltaSign(a.kpis[1].delta) }}{{ a.kpis[1].delta | number:'1.1-1' }}% vs mes anterior
+            </span>
+          </span>
+        }
+      </div>
+      <div class="mini-chart" role="img" aria-label="Barras de tendencia mensual de ingresos">
+        @for (bar of miniChartBars(); track trackByIdx($index); let i = $index) {
+          <div class="mc-col" [style.--mc-idx]="i">
+            <span class="mc-val">{{ shortNumber(bar.value) }}</span>
+            <div class="mc-track">
+              <div class="mc-fill" [style.height.%]="barHeightPct(bar.value, miniChartMax())"></div>
+            </div>
+            <span class="mc-label">{{ bar.label }}</span>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+</div>

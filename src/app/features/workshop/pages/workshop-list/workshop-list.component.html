@@ -1,0 +1,712 @@
+<div class="page-wrap">
+
+  <!-- ── Page header ──────────────────────────────────────────── -->
+  <div class="page-header">
+    <div class="page-title-group">
+      <h1 class="page-title">Taller</h1>
+      <span class="page-subtitle">Órdenes de trabajo</span>
+    </div>
+    <button class="btn-primary" (click)="openCreate()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Nueva OT
+    </button>
+  </div>
+
+  <!-- ── KPI strip ─────────────────────────────────────────────── -->
+  <div class="kpi-strip" role="status" aria-label="Resumen de órdenes">
+    <div class="kpi-item">
+      <span class="kpi-num">{{ totalCount() }}</span>
+      <span class="kpi-tag">Total</span>
+    </div>
+    <div class="kpi-div" aria-hidden="true"></div>
+    <div class="kpi-item">
+      <span class="kpi-num kpi-num--blue">{{ activeCount() }}</span>
+      <span class="kpi-tag">En taller</span>
+    </div>
+    <div class="kpi-div" aria-hidden="true"></div>
+    <div class="kpi-item">
+      <span class="kpi-num kpi-num--warn">{{ pendingApproval() }}</span>
+      <span class="kpi-tag">Pend. aprobación</span>
+    </div>
+    <div class="kpi-div" aria-hidden="true"></div>
+    <div class="kpi-item">
+      <span class="kpi-num kpi-num--ok">{{ readyDelivery() }}</span>
+      <span class="kpi-tag">Listas p/entregar</span>
+    </div>
+  </div>
+
+  <!-- ── Toolbar ───────────────────────────────────────────────── -->
+  <div class="toolbar">
+    <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+      @for (f of FILTER_STATUSES; track f.value) {
+        <button
+          class="chip"
+          [class.chip--active]="filterStatus() === f.value"
+          (click)="filterStatus.set(f.value)"
+          [attr.aria-pressed]="filterStatus() === f.value"
+        >
+          {{ f.label }}
+          @if (f.value && (countByStatus().get(f.value) ?? 0) > 0) {
+            <span class="chip-count">{{ countByStatus().get(f.value) }}</span>
+          }
+        </button>
+      }
+    </div>
+    <input
+      class="search-input"
+      type="search"
+      placeholder="Buscar OT, cliente o moto…"
+      [value]="query()"
+      (input)="query.set($any($event.target).value)"
+      aria-label="Buscar órdenes de trabajo"
+    />
+  </div>
+
+  <!-- ── Error banner ───────────────────────────────────────────── -->
+  @if (error()) {
+    <p class="error-banner" role="alert">{{ error() }}</p>
+  }
+
+  <!-- ── Table ─────────────────────────────────────────────────── -->
+  <div class="table-wrap">
+    <table class="ot-table" aria-label="Órdenes de trabajo">
+      <thead>
+        <tr>
+          <th scope="col">OT / Tipo</th>
+          <th scope="col">Cliente / Moto</th>
+          <th scope="col" class="col-center">Estado</th>
+          <th scope="col" class="col-right">Presupuesto</th>
+          <th scope="col">Recepción</th>
+          <th scope="col" class="col-narrow"></th>
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          @for (_ of [1,2,3,4,5]; track $index) {
+            <tr class="skel-row">
+              <td><span class="skel skel--name"></span><span class="skel skel--sub"></span></td>
+              <td><span class="skel skel--name"></span><span class="skel skel--sub"></span></td>
+              <td class="col-center"><span class="skel skel--badge"></span></td>
+              <td class="col-right"><span class="skel skel--sub" style="width:64px"></span></td>
+              <td><span class="skel skel--date"></span></td>
+              <td></td>
+            </tr>
+          }
+        } @else if (filtered().length === 0) {
+          <tr>
+            <td colspan="6">
+              <div class="empty-state" role="status">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                <span>{{ filterStatus() || query() ? 'Sin resultados para este filtro' : 'No hay órdenes de trabajo' }}</span>
+              </div>
+            </td>
+          </tr>
+        } @else {
+          @for (order of filtered(); track order.id; let i = $index) {
+            <tr
+              class="ot-row"
+              [class.ot-row--selected]="selected()?.id === order.id"
+              [style.--idx]="animIdx(i)"
+              (click)="openDetail(order)"
+              tabindex="0"
+              (keydown.enter)="openDetail(order)"
+              (keydown.space)="openDetail(order)"
+              [attr.aria-label]="'Ver detalle de ' + order.numeroOt"
+            >
+              <td>
+                <div class="cell-ot">
+                  <span class="ot-num">{{ order.numeroOt }}</span>
+                  <span class="tipo-badge">{{ TIPO_LABEL[order.tipo] }}</span>
+                </div>
+              </td>
+              <td>
+                <div class="cell-person">
+                  <span class="person-name">{{ order.customerName || '—' }}</span>
+                  <span class="person-sub">{{ order.motoDescription || 'Sin descripción' }}</span>
+                </div>
+              </td>
+              <td class="col-center">
+                <span class="status-badge" [attr.data-status]="order.status">
+                  {{ STATUS_LABEL[order.status] }}
+                </span>
+              </td>
+              <td class="col-right">
+                <span class="cell-amount" [class.cell-amount--zero]="!order.totalPresupuestado">
+                  {{ order.totalPresupuestado ? 'S/ ' + (order.totalPresupuestado | number:'1.2-2') : '—' }}
+                </span>
+              </td>
+              <td>
+                <div class="cell-date">
+                  <span>{{ order.fechaRecepcion | date:'dd/MM/yy' }}</span>
+                  <span class="days-ago">hace {{ daysAgo(order.fechaRecepcion) }}d</span>
+                </div>
+              </td>
+              <td class="cell-chevron" aria-hidden="true">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </td>
+            </tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ── Panel backdrop ─────────────────────────────────────────── -->
+  @if (panelOpen()) {
+    <div class="panel-backdrop" (click)="closePanel()" aria-hidden="true"></div>
+  }
+
+  <!-- ── Detail / Create panel ─────────────────────────────────── -->
+  <div
+    class="detail-panel"
+    [class.detail-panel--open]="panelOpen()"
+    role="dialog"
+    [attr.aria-label]="panelMode() === 'create' ? 'Nueva orden de trabajo' : 'Detalle de orden'"
+    aria-modal="true"
+  >
+
+    <!-- ── CREATE MODE ────────────────────────────────────────── -->
+    @if (panelMode() === 'create') {
+
+      <div class="panel-header">
+        <div class="panel-header-main">
+          <p class="panel-name">Nueva Orden de Trabajo</p>
+          <p class="panel-sub">Estado inicial: RECIBIDA · OT-{{ today() }}-###</p>
+        </div>
+        <button class="panel-close" (click)="closePanel()" aria-label="Cerrar panel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="panel-body">
+        <div class="tab-content">
+
+          <div class="form-section">
+            <p class="group-title">Cliente y moto</p>
+            <div class="af-fields">
+              <div class="af-field af-field--full">
+                <label class="af-label" for="c-name">Nombre del cliente</label>
+                <input id="c-name" class="af-input" type="text" placeholder="Ej. Juan Pérez" [(ngModel)]="createForm.customerName" />
+              </div>
+              <div class="af-field af-field--full">
+                <label class="af-label" for="c-phone">
+                  Teléfono del cliente
+                  <span class="af-label-opt">opcional — para notificaciones WA</span>
+                </label>
+                <input id="c-phone" class="af-input" type="tel" placeholder="Ej. 987654321" [(ngModel)]="createForm.customerPhone" />
+              </div>
+              <div class="af-field af-field--full">
+                <label class="af-label" for="c-moto">Descripción de la moto</label>
+                <input id="c-moto" class="af-input" type="text" placeholder="Ej. Honda CB190R 2022 roja" [(ngModel)]="createForm.motoDescription" />
+              </div>
+              <div class="af-field">
+                <label class="af-label" for="c-vin">VIN / Placa (opcional)</label>
+                <input id="c-vin" class="af-input" type="text" placeholder="123ABC456" [(ngModel)]="createForm.motoVin" />
+              </div>
+              <div class="af-field">
+                <label class="af-label" for="c-km">Km entrada</label>
+                <input id="c-km" class="af-input" type="number" min="0" placeholder="ej. 12000" [(ngModel)]="createForm.kilometrajeEntrada" />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <p class="group-title">Tipo de servicio y falla</p>
+            <div class="af-fields">
+              <div class="af-field af-field--full">
+                <label class="af-label" for="c-tipo">Tipo de OT</label>
+                <select id="c-tipo" class="af-select" [(ngModel)]="createForm.tipo">
+                  @for (t of TIPO_OPTIONS; track t) {
+                    <option [value]="t">{{ TIPO_LABEL[t] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+            <div class="af-field af-field--full" style="margin-top:10px">
+              <label class="af-label" for="c-falla">Falla reportada por el cliente</label>
+              <textarea id="c-falla" class="af-textarea" rows="3" placeholder="Describe el problema o la solicitud del cliente…" [(ngModel)]="createForm.fallaReportada"></textarea>
+            </div>
+            <div class="af-field af-field--full" style="margin-top:10px">
+              <label class="af-label" for="c-obs">Observaciones de recepción</label>
+              <textarea id="c-obs" class="af-textarea" rows="2" placeholder="Estado visual, accesorios, rayones…" [(ngModel)]="createForm.observaciones"></textarea>
+            </div>
+          </div>
+
+          @if (actionError()) {
+            <p class="action-error" role="alert">{{ actionError() }}</p>
+          }
+
+        </div>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn-cancel" (click)="closePanel()">Cancelar</button>
+        <button
+          class="btn-action btn-action--approve"
+          (click)="submitCreate()"
+          [disabled]="actionLoading()"
+        >
+          @if (actionLoading()) { <span class="spinner" aria-hidden="true"></span> }
+          Crear OT
+        </button>
+      </div>
+
+    }
+
+    <!-- ── DETAIL MODE ────────────────────────────────────────── -->
+    @if (panelMode() === 'detail' && selected(); as o) {
+
+      <div class="panel-header">
+        <div class="panel-header-main">
+          <p class="panel-name">{{ o.numeroOt }}</p>
+          <div class="panel-header-badges">
+            <span class="status-badge status-badge--lg" [attr.data-status]="o.status">
+              {{ STATUS_LABEL[o.status] }}
+            </span>
+            <span class="tipo-badge">{{ TIPO_LABEL[o.tipo] }}</span>
+            @if (lastNotifSent() === true) {
+              <span class="wa-notif-badge" aria-label="Notificación WhatsApp enviada al cliente">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.035.507 3.952 1.395 5.634L0 24l6.545-1.374A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.814 9.814 0 0 1-5.004-1.371l-.359-.214-3.723.782.796-3.636-.235-.374A9.786 9.786 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+                </svg>
+                WA enviado
+              </span>
+            }
+          </div>
+        </div>
+        <button class="panel-close" (click)="closePanel()" aria-label="Cerrar panel">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+
+      <!-- Budget summary strip -->
+      @if (o.totalPresupuestado > 0) {
+        <div class="budget-strip">
+          <span class="budget-label">Presupuesto total</span>
+          <span class="budget-amount">S/ {{ o.totalPresupuestado | number:'1.2-2' }}</span>
+          <span class="approval-pill" [attr.data-approval]="o.estadoAprobacion">
+            {{ o.estadoAprobacion }}
+          </span>
+        </div>
+      }
+
+      <!-- Tab nav -->
+      <nav class="tab-nav" aria-label="Secciones de la OT">
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'resumen'"      (click)="setTab('resumen')">Resumen</button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'diagnostico'"  (click)="setTab('diagnostico')">Diagnóstico y presupuesto</button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'entrega'"      (click)="setTab('entrega')">Entrega</button>
+      </nav>
+
+      <div class="panel-body">
+
+        <!-- ── TAB: RESUMEN ─────────────────────────────── -->
+        @if (activeTab() === 'resumen') {
+          <div class="tab-content">
+
+            <!-- Info grid -->
+            <div class="info-group">
+              <p class="group-title">Cliente y moto</p>
+              <dl class="info-grid">
+                <dt>Cliente</dt>
+                <dd>{{ o.customerName || '—' }}</dd>
+                <dt>Moto</dt>
+                <dd>{{ o.motoDescription || '—' }}</dd>
+                @if (o.motoVin) {
+                  <dt>VIN / Placa</dt>
+                  <dd class="mono">{{ o.motoVin }}</dd>
+                }
+                @if (o.kilometrajeEntrada) {
+                  <dt>Km entrada</dt>
+                  <dd class="mono">{{ o.kilometrajeEntrada | number }} km</dd>
+                }
+              </dl>
+            </div>
+
+            @if (o.fallaReportada) {
+              <div class="info-group">
+                <p class="group-title">Falla reportada</p>
+                <div class="falla-box">{{ o.fallaReportada }}</div>
+              </div>
+            }
+
+            @if (o.observacionesRecepcion) {
+              <div class="info-group">
+                <p class="group-title">Observaciones de recepción</p>
+                <p class="obs-text">{{ o.observacionesRecepcion }}</p>
+              </div>
+            }
+
+            <div class="info-group">
+              <p class="group-title">Fechas</p>
+              <dl class="info-grid">
+                <dt>Recepción</dt>
+                <dd class="mono">{{ o.fechaRecepcion | date:'dd/MM/yyyy HH:mm' }}</dd>
+                @if (o.fechaAgendada) {
+                  <dt>Agendada</dt>
+                  <dd class="mono">{{ o.fechaAgendada | date:'dd/MM/yyyy HH:mm' }}</dd>
+                }
+                @if (o.fechaEntregaPrometida) {
+                  <dt>Entrega prometida</dt>
+                  <dd class="mono">{{ o.fechaEntregaPrometida | date:'dd/MM/yyyy' }}</dd>
+                }
+                @if (o.fechaEntregaReal) {
+                  <dt>Entrega real</dt>
+                  <dd class="mono">{{ o.fechaEntregaReal | date:'dd/MM/yyyy HH:mm' }}</dd>
+                }
+              </dl>
+            </div>
+
+            <!-- Status timeline -->
+            <div class="info-group">
+              <p class="group-title">Estado del flujo</p>
+              @if (o.status === 'CANCELADA') {
+                <div class="cancelled-notice" role="status">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+                  OT cancelada
+                </div>
+              }
+              <ol class="timeline" aria-label="Progreso de la orden">
+                @for (step of timelineSteps(o); track step.status; let last = $last) {
+                  <li class="timeline-step" [attr.data-state]="step.state">
+                    <div class="step-dot" aria-hidden="true">
+                      @if (step.state === 'done') {
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      }
+                    </div>
+                    @if (!last) { <div class="step-line" aria-hidden="true"></div> }
+                    <div class="step-content">
+                      <span class="step-label">{{ step.label }}</span>
+                    </div>
+                  </li>
+                }
+              </ol>
+            </div>
+
+          </div>
+        }
+
+        <!-- ── TAB: DIAGNÓSTICO Y PRESUPUESTO ──────────── -->
+        @if (activeTab() === 'diagnostico') {
+          <div class="tab-content">
+
+            <!-- Diagnosis textarea -->
+            <div class="info-group">
+              <p class="group-title">Diagnóstico del mecánico</p>
+              <textarea
+                class="af-textarea diag-textarea"
+                rows="5"
+                placeholder="Describe el diagnóstico técnico, causa raíz y trabajos necesarios…"
+                [value]="diagText()"
+                (input)="diagText.set($any($event.target).value)"
+                [attr.aria-label]="'Diagnóstico de ' + o.numeroOt"
+              ></textarea>
+              <div class="diag-footer">
+                @if (o.status === 'RECIBIDA' && diagText().trim()) {
+                  <span class="diag-hint">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    Al guardar pasará a Diagnóstico automáticamente
+                  </span>
+                }
+                <button
+                  class="btn-action btn-action--approve btn-action--sm"
+                  (click)="saveDiagnosis()"
+                  [disabled]="diagLoading() || !diagText().trim()"
+                >
+                  @if (diagLoading()) { <span class="spinner" aria-hidden="true"></span> }
+                  Guardar diagnóstico
+                </button>
+              </div>
+            </div>
+
+            <!-- Items table -->
+            <div class="info-group">
+              <div class="section-header">
+                <p class="group-title" style="margin:0">Presupuesto — ítems</p>
+                @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                  <button class="btn-add-item" (click)="addItemOpen.set(!addItemOpen())" [attr.aria-expanded]="addItemOpen()">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Agregar ítem
+                  </button>
+                }
+              </div>
+
+              @if (o.items.length === 0 && !addItemOpen()) {
+                <p class="items-empty">Sin ítems. Agrega servicios o repuestos al presupuesto.</p>
+              } @else {
+
+                <div class="items-table-wrap">
+                  <table class="items-table" aria-label="Ítems del presupuesto">
+                    <thead>
+                      <tr>
+                        <th scope="col">Tipo</th>
+                        <th scope="col">Descripción</th>
+                        <th scope="col" class="col-right">Cant.</th>
+                        <th scope="col" class="col-right">P. Unit.</th>
+                        <th scope="col" class="col-right">Total</th>
+                        @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                          <th scope="col" class="col-narrow"></th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of o.items; track item.id) {
+                        <tr class="item-row">
+                          <td><span class="item-tipo" [attr.data-tipo]="item.tipo">{{ item.tipo }}</span></td>
+                          <td class="item-desc">{{ item.descripcion }}</td>
+                          <td class="col-right mono-sm">{{ item.cantidad | number:'1.0-2' }}</td>
+                          <td class="col-right mono-sm">S/ {{ item.precioUnitario | number:'1.2-2' }}</td>
+                          <td class="col-right mono-sm">S/ {{ item.total | number:'1.2-2' }}</td>
+                          @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                            <td class="col-narrow">
+                              <button class="btn-remove" (click)="removeItem(item.id)" [attr.aria-label]="'Eliminar ' + item.descripcion">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                              </button>
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr class="items-total-row">
+                        <td colspan="4" class="total-label">Total presupuestado</td>
+                        <td class="col-right total-amount">S/ {{ o.totalPresupuestado | number:'1.2-2' }}</td>
+                        @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                          <td></td>
+                        }
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              }
+
+              <!-- Add item form -->
+              @if (addItemOpen()) {
+                <div class="add-item-form" role="form" aria-label="Agregar ítem al presupuesto">
+                  <div class="af-fields">
+                    <div class="af-field">
+                      <label class="af-label" for="i-tipo">Tipo</label>
+                      <select id="i-tipo" class="af-select" [(ngModel)]="addItemForm.tipo">
+                        <option value="SERVICIO">SERVICIO</option>
+                        <option value="REPUESTO">REPUESTO</option>
+                      </select>
+                    </div>
+                    <div class="af-field af-field--full">
+                      <label class="af-label" for="i-desc">Descripción</label>
+                      <input id="i-desc" class="af-input" type="text" placeholder="Ej. Cambio de aceite 10W40" [(ngModel)]="addItemForm.descripcion" />
+                    </div>
+                    <div class="af-field">
+                      <label class="af-label" for="i-qty">Cantidad</label>
+                      <input id="i-qty" class="af-input" type="number" min="0.01" step="0.01" [(ngModel)]="addItemForm.cantidad" />
+                    </div>
+                    <div class="af-field">
+                      <label class="af-label" for="i-price">P. Unitario (S/)</label>
+                      <input id="i-price" class="af-input" type="number" min="0" step="0.01" [(ngModel)]="addItemForm.precioUnitario" />
+                    </div>
+                  </div>
+                  <div class="add-item-footer">
+                    <span class="item-total-preview">Total: <strong>S/ {{ addItemTotal() | number:'1.2-2' }}</strong></span>
+                    <div class="add-item-actions">
+                      <button class="btn-cancel btn-cancel--sm" (click)="addItemOpen.set(false)">Cancelar</button>
+                      <button
+                        class="btn-action btn-action--approve btn-action--sm"
+                        (click)="submitAddItem()"
+                        [disabled]="itemLoading() || !addItemForm.descripcion.trim()"
+                      >
+                        @if (itemLoading()) { <span class="spinner" aria-hidden="true"></span> }
+                        Agregar
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <!-- Approval (only when PRESUPUESTADA) -->
+            @if (o.status === 'PRESUPUESTADA') {
+              <div class="approval-section" role="group" aria-label="Aprobación del presupuesto">
+                <p class="group-title">Aprobación del cliente</p>
+                <p class="approval-hint">Registra la respuesta del cliente sobre el presupuesto presentado.</p>
+                <div class="approval-btns">
+                  <button
+                    class="btn-action btn-action--approve"
+                    (click)="setApproval('aprobado')"
+                    [disabled]="approvalLoading()"
+                    [class.btn-action--selected]="o.estadoAprobacion === 'aprobado'"
+                  >
+                    @if (approvalLoading()) { <span class="spinner" aria-hidden="true"></span> }
+                    Aprobado
+                  </button>
+                  <button
+                    class="btn-action btn-action--partial"
+                    (click)="setApproval('parcial')"
+                    [disabled]="approvalLoading()"
+                    [class.btn-action--selected]="o.estadoAprobacion === 'parcial'"
+                  >
+                    Parcial
+                  </button>
+                  <button
+                    class="btn-action btn-action--reject"
+                    (click)="setApproval('rechazado')"
+                    [disabled]="approvalLoading()"
+                    [class.btn-action--selected]="o.estadoAprobacion === 'rechazado'"
+                  >
+                    Rechazado
+                  </button>
+                </div>
+              </div>
+            }
+
+          </div>
+        }
+
+        <!-- ── TAB: ENTREGA ─────────────────────────────── -->
+        @if (activeTab() === 'entrega') {
+          <div class="tab-content">
+
+            @if (o.status === 'ENTREGADA') {
+              <!-- Read-only delivery summary -->
+              <div class="info-group">
+                <p class="group-title">Entrega completada</p>
+                <dl class="info-grid">
+                  <dt>Fecha entrega</dt>
+                  <dd class="mono">{{ o.fechaEntregaReal | date:'dd/MM/yyyy HH:mm' }}</dd>
+                  @if (o.kilometrajeSalida) {
+                    <dt>Km salida</dt>
+                    <dd class="mono">{{ o.kilometrajeSalida | number }} km</dd>
+                  }
+                  @if (o.proximaRevisionKm) {
+                    <dt>Próxima revisión</dt>
+                    <dd class="mono">{{ o.proximaRevisionKm | number }} km</dd>
+                  }
+                  @if (o.tiempoRealHoras) {
+                    <dt>Horas trabajadas</dt>
+                    <dd class="mono">{{ o.tiempoRealHoras }} h</dd>
+                  }
+                </dl>
+                <div class="delivered-badge" role="status">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                  OT entregada al cliente
+                </div>
+              </div>
+
+            } @else if (o.status === 'LISTA') {
+              <!-- Close form -->
+              <div class="info-group">
+                <p class="group-title">Datos de entrega</p>
+                <p class="close-hint">La moto está lista. Completa los datos de entrega y cierra la OT.</p>
+                <div class="af-fields">
+                  <div class="af-field">
+                    <label class="af-label" for="cl-km">Km salida</label>
+                    <input id="cl-km" class="af-input" type="number" min="0" placeholder="ej. 12450" [(ngModel)]="closeKmSalida" />
+                  </div>
+                  <div class="af-field">
+                    <label class="af-label" for="cl-prox">Próxima revisión km</label>
+                    <input id="cl-prox" class="af-input" type="number" min="0" placeholder="ej. 15000" [(ngModel)]="closeKmProxRevision" />
+                  </div>
+                  <div class="af-field">
+                    <label class="af-label" for="cl-hrs">Horas trabajadas</label>
+                    <input id="cl-hrs" class="af-input" type="number" min="0" step="0.5" placeholder="ej. 3.5" [(ngModel)]="closeHoras" />
+                  </div>
+                </div>
+              </div>
+
+              @if (actionError()) {
+                <p class="action-error" role="alert">{{ actionError() }}</p>
+              }
+
+              <button
+                class="btn-close-ot"
+                (click)="submitClose()"
+                [disabled]="closeLoading()"
+              >
+                @if (closeLoading()) { <span class="spinner spinner--white" aria-hidden="true"></span> }
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                Cerrar y entregar OT
+              </button>
+
+            } @else {
+              <div class="entrega-pending" role="status">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <p>La OT debe estar en estado <strong>Lista</strong> para poder registrar la entrega.</p>
+                <p class="entrega-pending-sub">Estado actual: {{ STATUS_LABEL[o.status] }}</p>
+              </div>
+            }
+
+          </div>
+        }
+
+      </div>
+
+      <!-- ── Action bar (contextual next-state buttons) ─── -->
+      @if (nextStates().length > 0 && o.status !== 'ENTREGADA') {
+        <div class="action-bar">
+          @if (actionError()) {
+            <p class="action-error action-error--inline" role="alert">{{ actionError() }}</p>
+          }
+          <span class="action-bar-label">Avanzar a:</span>
+          @for (s of nextStates(); track s) {
+            <button
+              class="btn-action"
+              [class.btn-action--advance]="isAdvanceAction(s) && s !== 'ENTREGADA'"
+              [class.btn-action--done]="s === 'ENTREGADA'"
+              [class.btn-action--cancel]="isCancelAction(s)"
+              (click)="s === 'ENTREGADA' ? setTab('entrega') : transitionStatus(s)"
+              [disabled]="actionLoading()"
+            >
+              @if (actionLoading()) { <span class="spinner" aria-hidden="true"></span> }
+              {{ STATUS_LABEL[s] }}
+            </button>
+          }
+        </div>
+      }
+
+      <!-- ── PDF download ──────────────────────────────── -->
+      <div class="pdf-bar">
+        <button class="btn-pdf-dl" type="button"
+                (click)="downloadPdf(o)" [disabled]="pdfLoading()"
+                [attr.aria-label]="pdfLoading() ? 'Generando PDF...' : 'Descargar resumen PDF de ' + o.numeroOt">
+          @if (pdfLoading()) {
+            <span class="pdf-spinner" aria-hidden="true"></span>
+            Generando PDF…
+          } @else {
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar resumen PDF
+          }
+        </button>
+      </div>
+
+    }
+
+  </div>
+
+  <!-- ── Toast ──────────────────────────────────────────────────── -->
+  @if (toast()) {
+    <div
+      class="toast"
+      [class.toast--ok]="toast()!.type === 'ok'"
+      [class.toast--err]="toast()!.type === 'err'"
+      [class.toast--wa]="toast()!.type === 'wa'"
+      role="status"
+      aria-live="polite"
+    >
+      @if (toast()!.type === 'wa') {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 2.035.507 3.952 1.395 5.634L0 24l6.545-1.374A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.814 9.814 0 0 1-5.004-1.371l-.359-.214-3.723.782.796-3.636-.235-.374A9.786 9.786 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182S21.818 6.57 21.818 12 17.43 21.818 12 21.818z"/>
+        </svg>
+      } @else if (toast()!.type === 'ok') {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      } @else {
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+      }
+      {{ toast()!.msg }}
+    </div>
+  }
+
+</div>

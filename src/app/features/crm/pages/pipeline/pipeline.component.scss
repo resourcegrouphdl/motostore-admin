@@ -1,0 +1,388 @@
+/* ── Summary bar ────────────────────────────────────────────── */
+.pipe-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+
+.summary-stat strong { color: var(--ink); font-weight: 700; }
+.summary-stat--won strong { color: var(--success); }
+.summary-stat--lost strong { color: var(--danger); }
+.summary-sep { color: var(--border); }
+
+.error-banner {
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: color-mix(in oklab, var(--danger) 10%, var(--surface));
+  border: 1px solid color-mix(in oklab, var(--danger) 20%, transparent);
+  color: var(--danger); font-size: 13px;
+  margin-bottom: 12px;
+}
+
+/* ── Kanban board ────────────────────────────────────────────── */
+.kanban {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(180px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  align-items: start;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: repeat(3, minmax(180px, 1fr));
+  }
+  @media (max-width: 680px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ── Column ──────────────────────────────────────────────────── */
+.kanban-col {
+  background: var(--bg-2);
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  min-height: 120px;
+
+  &--skel { min-height: 160px; }
+
+  /* Stage accent colors */
+  &[data-stage="WON"]  { border-top: 3px solid var(--success); }
+  &[data-stage="LOST"] { border-top: 3px solid var(--danger);  }
+  &[data-stage="NEGOTIATION"] { border-top: 3px solid var(--warning); }
+}
+
+.col-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.col-stage-dot {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--ink-3);
+
+  .kanban-col[data-stage="NEW"]            & { background: var(--ink-3); }
+  .kanban-col[data-stage="CONTACTED"]      & { background: oklch(70% 0.14 245); }
+  .kanban-col[data-stage="DEMO_SCHEDULED"] & { background: var(--accent); }
+  .kanban-col[data-stage="DEMO_DONE"]      & { background: oklch(70% 0.18 32); }
+  .kanban-col[data-stage="PROPOSAL_SENT"]  & { background: oklch(68% 0.16 78); }
+  .kanban-col[data-stage="NEGOTIATION"]    & { background: var(--warning); }
+  .kanban-col[data-stage="WON"]            & { background: var(--success); }
+  .kanban-col[data-stage="LOST"]           & { background: var(--danger); }
+}
+
+.col-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+  flex: 1;
+}
+
+.col-count {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-3);
+  background: var(--surface);
+  border-radius: var(--r-pill);
+  padding: 1px 7px;
+  border: 1px solid var(--border);
+
+  &--active {
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    border-color: transparent;
+  }
+}
+
+.col-cards { display: flex; flex-direction: column; gap: 6px; }
+
+.col-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  font-size: 14px;
+  color: var(--border);
+}
+
+/* ── Opportunity card ────────────────────────────────────────── */
+.opp-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+  transition: box-shadow 140ms, border-color 140ms, transform 100ms;
+  animation: card-in 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--idx, 0) * 30ms);
+
+  &:hover {
+    box-shadow: var(--shadow-2);
+    border-color: var(--accent);
+    transform: translateY(-1px);
+  }
+
+  &--selected {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px var(--accent-soft);
+  }
+}
+
+.card-customer {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-notes {
+  font-size: 11.5px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.card-meta { display: flex; align-items: center; margin-top: 2px; }
+
+.card-age {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink-3);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: var(--r-pill);
+
+  &--warn   { background: color-mix(in oklab, var(--warning) 15%, var(--surface)); color: oklch(44% 0.13 78); }
+  &--danger { background: color-mix(in oklab, var(--danger)  12%, var(--surface)); color: var(--danger); }
+}
+
+/* ── Skeleton ─────────────────────────────────────────────────── */
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+.skel {
+  display: block; border-radius: 4px;
+  background: linear-gradient(90deg, var(--border) 25%, color-mix(in oklab, var(--border) 60%, var(--surface)) 50%, var(--border) 100%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  &--title   { width: 80%; height: 11px; }
+  &--count   { width: 20px; height: 16px; border-radius: var(--r-pill); }
+  &--name    { width: 75%; height: 13px; }
+  &--age     { width: 24px; height: 10px; }
+}
+
+.col-header-skel { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.card-skel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+
+/* ── Detail panel ────────────────────────────────────────────── */
+.detail-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(10,10,10,0.4);
+  z-index: 200;
+}
+
+.detail-panel {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: min(380px, 100vw);
+  background: var(--surface);
+  box-shadow: -8px 0 32px rgba(10,10,10,0.14);
+  z-index: 201;
+  display: flex; flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &--open { transform: translateX(0); }
+}
+
+.dp-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.dp-title-block { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0; }
+
+.dp-stage-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+
+  &[data-stage="WON"]  { background: color-mix(in oklab, var(--success) 14%, var(--surface)); color: oklch(38% 0.14 152); }
+  &[data-stage="LOST"] { background: color-mix(in oklab, var(--danger) 12%, var(--surface)); color: var(--danger); }
+  &[data-stage="NEGOTIATION"] { background: color-mix(in oklab, var(--warning) 14%, var(--surface)); color: oklch(44% 0.13 78); }
+}
+
+.dp-customer {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.dp-notes {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dp-close {
+  width: 30px; height: 30px; border: none; background: var(--bg-2);
+  border-radius: 50%; color: var(--ink-3);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; transition: background 120ms, color 120ms;
+  &:hover { background: var(--border); color: var(--ink); }
+}
+
+/* Sections */
+.dp-section {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--hairline);
+  flex-shrink: 0;
+
+  &--grow { flex: 1; overflow-y: auto; border-bottom: none; }
+}
+
+.dp-section-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-3);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0 0 10px;
+}
+
+/* Stage chips */
+.stage-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.stage-chip {
+  padding: 5px 11px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-pill);
+  background: var(--surface);
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, border-color 120ms, color 120ms, transform 100ms;
+
+  &:hover:not(:disabled):not(.stage-chip--active) { border-color: var(--accent); color: var(--accent-ink); }
+  &:active:not(:disabled) { transform: scale(0.97); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  &--active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    cursor: default;
+  }
+
+  &--won:not(.stage-chip--active) {
+    color: oklch(38% 0.14 152);
+    border-color: oklch(80% 0.13 152);
+    &:hover { background: color-mix(in oklab, var(--success) 10%, var(--surface)); border-color: var(--success); }
+  }
+
+  &--lost:not(.stage-chip--active) {
+    color: var(--danger);
+    border-color: color-mix(in oklab, var(--danger) 30%, var(--border));
+    &:hover { background: color-mix(in oklab, var(--danger) 8%, var(--surface)); }
+  }
+
+  &--won.stage-chip--active  { background: var(--success); border-color: var(--success); }
+  &--lost.stage-chip--active { background: var(--danger);  border-color: var(--danger); }
+}
+
+/* Interaction compose */
+.inter-compose {
+  display: flex; gap: 6px; align-items: center;
+}
+
+.inter-select {
+  padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; font-size: 12.5px; color: var(--ink-2);
+  background: var(--surface); cursor: pointer; flex-shrink: 0;
+  &:focus { outline: none; border-color: var(--accent); }
+}
+
+.inter-input {
+  flex: 1; padding: 7px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  font: inherit; font-size: 12.5px; color: var(--ink);
+  background: var(--surface);
+  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+}
+
+.inter-save {
+  padding: 7px 14px; border: none; border-radius: 6px;
+  background: var(--accent); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600;
+  cursor: pointer; flex-shrink: 0; transition: filter 100ms;
+  &:hover:not(:disabled) { filter: brightness(1.1); }
+  &:disabled { opacity: 0.6; }
+}
+
+/* Interaction history */
+.dp-loading, .dp-empty { font-size: 12.5px; color: var(--ink-3); margin: 0; }
+
+.inter-history { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+
+.inter-entry {
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 0; border-bottom: 1px solid var(--hairline);
+  &:last-child { border-bottom: none; }
+}
+
+.ie-type {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  padding: 2px 7px; border-radius: var(--r-pill);
+  background: var(--accent-soft); color: var(--accent-ink); flex-shrink: 0;
+}
+
+.ie-notes { flex: 1; font-size: 12.5px; color: var(--ink-2); }
+.ie-by    { font-size: 11px; color: var(--ink-3); font-family: var(--font-mono); flex-shrink: 0; margin-left: auto; }
+
+/* ── Animations ─────────────────────────────────────────────── */
+@keyframes card-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .opp-card { animation: none; transition: none; }
+  .skel { animation: none; background: var(--border); }
+  .detail-panel { transition: none; }
+  .stage-chip { transition: none; }
+}

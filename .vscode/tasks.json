@@ -1,8 +1,8 @@
 {
-  // For more information, visit: https://go.microsoft.com/fwlink/?LinkId=733558
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "ng: serve",
       "type": "npm",
       "script": "start",
       "isBackground": true,
@@ -11,16 +11,13 @@
         "pattern": "$tsc",
         "background": {
           "activeOnStart": true,
-          "beginsPattern": {
-            "regexp": "(.*?)"
-          },
-          "endsPattern": {
-            "regexp": "bundle generation complete"
-          }
+          "beginsPattern": { "regexp": "(.*?)" },
+          "endsPattern": { "regexp": "bundle generation complete" }
         }
       }
     },
     {
+      "label": "ng: test",
       "type": "npm",
       "script": "test",
       "isBackground": true,
@@ -29,14 +26,38 @@
         "pattern": "$tsc",
         "background": {
           "activeOnStart": true,
-          "beginsPattern": {
-            "regexp": "(.*?)"
-          },
-          "endsPattern": {
-            "regexp": "bundle generation complete"
-          }
+          "beginsPattern": { "regexp": "(.*?)" },
+          "endsPattern": { "regexp": "bundle generation complete" }
         }
       }
+    },
+    {
+      "label": "infra: docker compose up",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "-f", "../motstore-infra/docker-compose.yml", "up", "-d"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "infra: docker compose down",
+      "type": "shell",
+      "command": "docker",
+      "args": ["compose", "-f", "../motstore-infra/docker-compose.yml", "down"],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
     }
   ]
 }

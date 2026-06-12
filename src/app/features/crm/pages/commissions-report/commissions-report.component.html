@@ -1,0 +1,143 @@
+<div class="cr-header">
+  <h2 class="cr-title">Reporte de comisiones</h2>
+  <div class="cr-period-wrap">
+    <label class="cr-period-label" for="cr-period">Periodo</label>
+    <input id="cr-period"
+           class="cr-period-input"
+           type="month"
+           [ngModel]="period()"
+           (ngModelChange)="onPeriodChange($event)" />
+  </div>
+</div>
+
+<!-- Loading -->
+@if (loading()) {
+  <div class="cr-skeleton" aria-busy="true" aria-label="Cargando reporte">
+    <div class="sk-kpi-strip">
+      @for (_ of [0,1,2,3]; track $index) {
+        <div class="sk-kpi-card sk-shimmer"></div>
+      }
+    </div>
+    <div class="sk-table sk-shimmer"></div>
+  </div>
+}
+
+<!-- Error -->
+@if (!loading() && error()) {
+  <p class="cr-error" role="alert">{{ error() }}</p>
+}
+
+<!-- Content -->
+@if (!loading() && !error()) {
+
+  <!-- KPI strip -->
+  <div class="kpi-strip" role="list" aria-label="Resumen del periodo">
+    <div class="kpi-card" role="listitem" style="--idx:0">
+      <span class="kpi-value">{{ totalWon() }}</span>
+      <span class="kpi-label">Cierres totales</span>
+    </div>
+    <div class="kpi-card" role="listitem" style="--idx:1">
+      <span class="kpi-value">S/ {{ totalSales() | number:'1.2-2' }}</span>
+      <span class="kpi-label">Ventas totales</span>
+    </div>
+    <div class="kpi-card kpi-card--accent" role="listitem" style="--idx:2">
+      <span class="kpi-value">S/ {{ totalCommissions() | number:'1.2-2' }}</span>
+      <span class="kpi-label">Comisiones totales</span>
+    </div>
+    @if (topSeller()) {
+      <div class="kpi-card kpi-card--gold" role="listitem" style="--idx:3">
+        <span class="kpi-value">{{ topSeller()!.sellerName.split(' ')[0] }}</span>
+        <span class="kpi-label">Top vendedor</span>
+      </div>
+    }
+  </div>
+
+  <!-- Empty state -->
+  @if (entries().length === 0) {
+    <p class="cr-empty">No hay vendedores activos o no hubo actividad en este periodo.</p>
+  } @else {
+
+    <!-- Commission table -->
+    <div class="cr-table-wrap">
+      <table class="cr-table" aria-label="Comisiones por vendedor">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th class="col-seller">Vendedor</th>
+            <th class="col-num">Cierres</th>
+            <th class="col-amount">Ventas (S/)</th>
+            <th class="col-bar">Participación</th>
+            <th class="col-rate">Comisión %</th>
+            <th class="col-amount cr-col-highlight">Comisión (S/)</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (entry of entries(); track entry.sellerUid; let i = $index) {
+            <tr class="cr-row" [style.--idx]="i" [class.cr-row--top]="i === 0">
+              <!-- Rank -->
+              <td class="col-rank">
+                @if (i === 0) { <span class="medal" aria-label="1er lugar">🥇</span> }
+                @else if (i === 1) { <span class="medal" aria-label="2do lugar">🥈</span> }
+                @else if (i === 2) { <span class="medal" aria-label="3er lugar">🥉</span> }
+                @else { <span class="rank-num">{{ i + 1 }}</span> }
+              </td>
+
+              <!-- Seller -->
+              <td class="col-seller">
+                <div class="seller-cell">
+                  <div class="avatar" [style.--hue]="avatarHue(entry.sellerUid)">
+                    {{ initials(entry.sellerName) }}
+                  </div>
+                  <div class="seller-info">
+                    <span class="seller-name">{{ entry.sellerName }}</span>
+                    <span class="seller-role">{{ roleLabel(entry.role) }}</span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Won count -->
+              <td class="col-num cr-num">{{ entry.wonCount }}</td>
+
+              <!-- Total sales -->
+              <td class="col-amount cr-num">{{ entry.totalSales | number:'1.2-2' }}</td>
+
+              <!-- Bar -->
+              <td class="col-bar">
+                <div class="bar-track" [attr.aria-label]="barWidth(entry) + '% del máximo'">
+                  <div class="bar-fill" [style.width.%]="barWidth(entry)"
+                       [class.bar-fill--top]="i === 0"></div>
+                </div>
+              </td>
+
+              <!-- Rate -->
+              <td class="col-rate cr-num">{{ entry.commissionRate | number:'1.1-2' }}%</td>
+
+              <!-- Commission amount (highlight) -->
+              <td class="col-amount cr-col-highlight">
+                <span class="commission-amount">S/ {{ entry.commissionAmount | number:'1.2-2' }}</span>
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="cr-total-row">
+            <td colspan="2" class="cr-total-label">Total equipo</td>
+            <td class="col-num cr-num cr-total">{{ totalWon() }}</td>
+            <td class="col-amount cr-num cr-total">{{ totalSales() | number:'1.2-2' }}</td>
+            <td class="col-bar"></td>
+            <td class="col-rate"></td>
+            <td class="col-amount cr-col-highlight cr-total">
+              S/ {{ totalCommissions() | number:'1.2-2' }}
+            </td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+
+    <!-- Note -->
+    <p class="cr-note">
+      Las comisiones se calculan sobre ventas completadas del periodo.
+      Las tasas se configuran en la pestaña <strong>Metas</strong>.
+    </p>
+  }
+}

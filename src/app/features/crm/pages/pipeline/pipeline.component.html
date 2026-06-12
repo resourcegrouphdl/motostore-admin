@@ -1,0 +1,169 @@
+<!-- ── Summary ─────────────────────────────────────────────── -->
+<div class="pipe-summary">
+  <span class="summary-stat"><strong>{{ total() }}</strong> oportunidades</span>
+  <span class="summary-sep" aria-hidden="true">·</span>
+  <span class="summary-stat summary-stat--won"><strong>{{ wonCount() }}</strong> ganadas</span>
+  <span class="summary-sep" aria-hidden="true">·</span>
+  <span class="summary-stat summary-stat--lost"><strong>{{ lostCount() }}</strong> perdidas</span>
+</div>
+
+<!-- ── Error ─────────────────────────────────────────────────── -->
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Kanban board ───────────────────────────────────────────── -->
+<div class="kanban" aria-label="Pipeline de oportunidades">
+
+  @if (loading()) {
+    @for (s of [1,2,3,4,5,6]; track s) {
+      <div class="kanban-col kanban-col--skel">
+        <div class="col-header-skel">
+          <span class="skel skel--title"></span>
+          <span class="skel skel--count"></span>
+        </div>
+        @for (c of [1,2]; track c) {
+          <div class="card-skel">
+            <span class="skel skel--name"></span>
+            <span class="skel skel--age"></span>
+          </div>
+        }
+      </div>
+    }
+  } @else {
+    @for (col of columns(); track col.stage) {
+      <div class="kanban-col" [attr.data-stage]="col.stage">
+
+        <!-- Column header -->
+        <div class="col-header">
+          <span class="col-stage-dot" aria-hidden="true"></span>
+          <h2 class="col-title">{{ col.label }}</h2>
+          <span class="col-count" [class.col-count--active]="col.cards.length > 0">
+            {{ col.cards.length }}
+          </span>
+        </div>
+
+        <!-- Cards -->
+        <div class="col-cards">
+          @if (col.cards.length === 0) {
+            <div class="col-empty" aria-label="Sin oportunidades en esta etapa">
+              <span>—</span>
+            </div>
+          }
+          @for (card of col.cards; track card.id; let i = $index) {
+            <button
+              class="opp-card"
+              type="button"
+              [class.opp-card--selected]="selected()?.id === card.id"
+              [style.--idx]="animIdx(i)"
+              (click)="selectCard(card)"
+              [attr.aria-pressed]="selected()?.id === card.id">
+
+              <span class="card-customer">{{ card.customerFullName }}</span>
+
+              @if (card.notes) {
+                <span class="card-notes">{{ card.notes }}</span>
+              }
+
+              <div class="card-meta">
+                <span class="card-age"
+                      [class.card-age--warn]="card.daysInStage > 7"
+                      [class.card-age--danger]="card.daysInStage > 14">
+                  {{ card.daysInStage }}d
+                </span>
+              </div>
+            </button>
+          }
+        </div>
+
+      </div>
+    }
+  }
+
+</div>
+
+<!-- ── Detail panel ───────────────────────────────────────────── -->
+@if (selected()) {
+  <div class="detail-backdrop" (click)="closeDetail()" aria-hidden="true"></div>
+}
+
+<aside class="detail-panel" [class.detail-panel--open]="!!selected()"
+       role="dialog" aria-modal="true" aria-label="Detalle de oportunidad">
+  @if (selected(); as opp) {
+    <!-- Header -->
+    <div class="dp-header">
+      <div class="dp-title-block">
+        <span class="dp-stage-badge" [attr.data-stage]="opp.stage">
+          {{ STAGE_LABEL[opp.stage] }}
+        </span>
+        <h2 class="dp-customer">{{ opp.customerFullName }}</h2>
+        @if (opp.notes) { <p class="dp-notes">{{ opp.notes }}</p> }
+      </div>
+      <button class="dp-close" type="button" (click)="closeDetail()" aria-label="Cerrar">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Move stage -->
+    <div class="dp-section">
+      <h3 class="dp-section-title">Mover a etapa</h3>
+      <div class="stage-chips">
+        @for (stage of ALL_STAGES; track stage) {
+          <button
+            class="stage-chip"
+            type="button"
+            [class.stage-chip--active]="opp.stage === stage"
+            [class.stage-chip--won]="stage === 'WON'"
+            [class.stage-chip--lost]="stage === 'LOST'"
+            [disabled]="opp.stage === stage || stageMoving()"
+            (click)="moveStage(stage)">
+            {{ STAGE_LABEL[stage] }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <!-- Add interaction -->
+    <div class="dp-section">
+      <h3 class="dp-section-title">Registrar interacción</h3>
+      <div class="inter-compose">
+        <select class="inter-select" [(ngModel)]="interForm.type"
+                [ngModelOptions]="{standalone:true}" aria-label="Tipo">
+          @for (t of ALL_INTER_TYPES; track t) {
+            <option [value]="t">{{ INTER_LABEL[t] }}</option>
+          }
+        </select>
+        <input class="inter-input" type="text" placeholder="Notas…"
+               [(ngModel)]="interForm.notes" [ngModelOptions]="{standalone:true}"
+               (keyup.enter)="submitInteraction()">
+        <button class="inter-save" type="button"
+                (click)="submitInteraction()" [disabled]="interSubmitting()">
+          @if (interSubmitting()) { … } @else { Guardar }
+        </button>
+      </div>
+    </div>
+
+    <!-- Interaction history -->
+    <div class="dp-section dp-section--grow">
+      <h3 class="dp-section-title">Historial</h3>
+      @if (interLoading()) {
+        <p class="dp-loading">Cargando historial…</p>
+      } @else if (interactions().length === 0) {
+        <p class="dp-empty">Sin interacciones aún.</p>
+      } @else {
+        <ul class="inter-history">
+          @for (inter of interactions(); track inter.id) {
+            <li class="inter-entry">
+              <span class="ie-type">{{ INTER_LABEL[inter.type] }}</span>
+              @if (inter.notes) { <span class="ie-notes">{{ inter.notes }}</span> }
+              <span class="ie-by">{{ inter.createdBy.slice(0, 6) }}…</span>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  }
+</aside>

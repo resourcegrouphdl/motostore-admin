@@ -32,12 +32,21 @@
               }
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
+              "../tokens.css",
+              "src/tailwind.css",
               "src/styles.scss"
             ],
             "scripts": []
           },
           "configurations": {
             "production": {
+              "fileReplacements": [
+                {
+                  "replace": "src/environments/environment.ts",
+                  "with": "src/environments/environment.prod.ts"
+                }
+              ],
               "budgets": [
                 {
                   "type": "initial",
@@ -46,8 +55,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "16kB",
+                  "maximumError": "25kB"
                 }
               ],
               "outputHashing": "all"
@@ -91,6 +100,9 @@
               }
             ],
             "styles": [
+              "@angular/material/prebuilt-themes/azure-blue.css",
+              "../tokens.css",
+              "src/tailwind.css",
               "src/styles.scss"
             ],
             "scripts": []
@@ -98,5 +110,8 @@
         }
       }
     }
+  },
+  "cli": {
+    "analytics": "655561ca-b256-4a40-a577-f583138b5054"
   }
 }

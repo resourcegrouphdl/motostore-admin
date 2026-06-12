@@ -1,0 +1,716 @@
+<div class="pr-page">
+
+  <!-- ── Page header ──────────────────────────────────────────── -->
+  <div class="pr-header">
+    <div class="pr-header-text">
+      <h1 class="pr-title">Planilla</h1>
+      <p class="pr-sub">Gestión de empleados · Procesamiento mensual · Boletas · PLAME</p>
+    </div>
+
+    @if (activeTab() !== 'employees') {
+      <div class="period-selector-wrap">
+        <label class="period-label" for="pr-period-select">Período</label>
+        @if (loadingPeriods()) {
+          <div class="period-skel"></div>
+        } @else if (periods().length > 0) {
+          <div class="period-select-row">
+            <select id="pr-period-select" class="period-select"
+                    [value]="selectedPeriodId()"
+                    (change)="changePeriod($any($event.target).value)">
+              @for (p of periods(); track p.id) {
+                <option [value]="p.id">{{ periodLabel(p) }}</option>
+              }
+            </select>
+            @if (selectedPeriod(); as p) {
+              <span class="payroll-status-badge" [attr.data-status]="p.status">
+                {{ PAYROLL_STATUS_LABEL[p.status] }}
+              </span>
+            }
+          </div>
+        } @else {
+          <span class="period-empty-hint">Procesa la primera planilla en el tab Planilla</span>
+        }
+      </div>
+    }
+  </div>
+
+  <!-- ── KPI strip ────────────────────────────────────────────── -->
+  <div class="pr-kpi-strip">
+    <div class="kpi-item">
+      <span class="kpi-label">Empleados activos</span>
+      <span class="kpi-num">{{ activeCount() }}</span>
+    </div>
+    @if (selectedPeriod(); as period) {
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Masa salarial bruta</span>
+        <span class="kpi-num kpi-num--mono">S/ {{ period.totalRemuneraciones | number:'1.2-2' }}</span>
+      </div>
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Neto a pagar</span>
+        <span class="kpi-num kpi-num--mono kpi-num--ok">S/ {{ period.totalNeto | number:'1.2-2' }}</span>
+      </div>
+      <div class="kpi-item kpi-item--sep">
+        <span class="kpi-label">Essalud empleador</span>
+        <span class="kpi-num kpi-num--mono">S/ {{ period.totalEssalud | number:'1.2-2' }}</span>
+      </div>
+    }
+  </div>
+
+  <!-- ── Tab bar ───────────────────────────────────────────────── -->
+  <div class="tab-bar" role="tablist" aria-label="Módulos de planilla">
+    @for (tab of [
+      { key: 'employees', label: 'Empleados' },
+      { key: 'payroll',   label: 'Planilla mensual' },
+      { key: 'payslips',  label: 'Boletas' },
+      { key: 'plame',     label: 'PLAME' }
+    ]; track tab.key) {
+      <button class="tab-btn" role="tab"
+              [class.tab-btn--active]="activeTab() === tab.key"
+              [attr.aria-selected]="activeTab() === tab.key"
+              (click)="setTab($any(tab.key))">
+        {{ tab.label }}
+      </button>
+    }
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: EMPLEADOS
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'employees') {
+    <div class="tab-content">
+
+      <div class="tab-toolbar">
+        <div class="left-controls">
+          <!-- Status filter -->
+          <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+            @for (opt of [
+              { key: 'ALL',      label: 'Todos' },
+              { key: 'ACTIVE',   label: 'Activos' },
+              { key: 'INACTIVE', label: 'Inactivos' }
+            ]; track opt.key) {
+              <button class="chip" [class.chip--active]="statusFilter() === opt.key"
+                      (click)="statusFilter.set($any(opt.key))">{{ opt.label }}</button>
+            }
+          </div>
+          <!-- Search -->
+          <div class="search-wrap">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input class="search-input" type="search" placeholder="Nombre, DNI, cargo…"
+                   [value]="employeeQuery()" (input)="employeeQuery.set($any($event.target).value)"
+                   aria-label="Buscar empleado" />
+          </div>
+        </div>
+        <button class="btn-add" type="button" (click)="openNewForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nuevo empleado
+        </button>
+      </div>
+
+      <!-- Employee form (slide-in panel) -->
+      @if (showForm()) {
+        <div class="emp-form-panel">
+          <div class="emp-form-panel__head">
+            <h2 class="emp-form-title">{{ editingId() ? 'Editar empleado' : 'Nuevo empleado' }}</h2>
+            <button class="btn-panel-close" type="button" (click)="closeForm()" aria-label="Cerrar">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+
+          <div class="emp-form-body">
+            <div class="form-row form-row--2">
+              <div class="field">
+                <label class="field-label" for="ef-first">Nombres</label>
+                <input id="ef-first" class="field-input" type="text" placeholder="Pedro"
+                       [value]="form().firstName"
+                       (input)="setField('firstName', $any($event.target).value)" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="ef-last">Apellidos</label>
+                <input id="ef-last" class="field-input" type="text" placeholder="García López"
+                       [value]="form().lastName"
+                       (input)="setField('lastName', $any($event.target).value)" />
+              </div>
+            </div>
+
+            <div class="form-row form-row--2">
+              <div class="field">
+                <label class="field-label" for="ef-dni">DNI</label>
+                <input id="ef-dni" class="field-input field-input--mono" type="text"
+                       placeholder="12345678" maxlength="8"
+                       [value]="form().dni"
+                       (input)="setField('dni', $any($event.target).value)" />
+                @if (form().dni.length > 0 && !isDniValid(form().dni)) {
+                  <span class="field-hint field-hint--err">Debe tener exactamente 8 dígitos</span>
+                }
+              </div>
+              <div class="field">
+                <label class="field-label" for="ef-start">Fecha de ingreso</label>
+                <input id="ef-start" class="field-input" type="date"
+                       [value]="form().startDate"
+                       (input)="setField('startDate', $any($event.target).value)" />
+              </div>
+            </div>
+
+            <div class="form-row form-row--2">
+              <div class="field">
+                <label class="field-label" for="ef-pos">Cargo</label>
+                <input id="ef-pos" class="field-input" type="text" placeholder="Asesor de ventas"
+                       [value]="form().position"
+                       (input)="setField('position', $any($event.target).value)" />
+              </div>
+              <div class="field">
+                <label class="field-label" for="ef-dept">Área</label>
+                <select id="ef-dept" class="field-select"
+                        [value]="form().department"
+                        (change)="setField('department', $any($event.target).value)">
+                  @for (dept of DEPARTMENTS; track dept) {
+                    <option [value]="dept">{{ dept }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row form-row--2">
+              <div class="field">
+                <label class="field-label" for="ef-salary">Sueldo base (S/)</label>
+                <input id="ef-salary" class="field-input field-input--mono" type="number"
+                       [placeholder]="SUELDO_MINIMO.toString()" [min]="SUELDO_MINIMO" step="50"
+                       [value]="form().baseSalary ?? ''"
+                       (input)="setField('baseSalary', +$any($event.target).value || undefined)" />
+                @if ((form().baseSalary ?? 0) > 0 && (form().baseSalary ?? 0) < SUELDO_MINIMO) {
+                  <span class="field-hint field-hint--err">Mínimo S/ {{ SUELDO_MINIMO }}</span>
+                }
+              </div>
+              <div class="field">
+                <label class="field-label">Sistema pensionario</label>
+                <div class="radio-group">
+                  <label class="radio-opt" [class.radio-opt--sel]="form().pensionType === 'AFP'">
+                    <input type="radio" name="pension" value="AFP"
+                           [checked]="form().pensionType === 'AFP'"
+                           (change)="setField('pensionType', 'AFP')" class="sr-only" />
+                    AFP
+                  </label>
+                  <label class="radio-opt" [class.radio-opt--sel]="form().pensionType === 'ONP'">
+                    <input type="radio" name="pension" value="ONP"
+                           [checked]="form().pensionType === 'ONP'"
+                           (change)="setField('pensionType', 'ONP')" class="sr-only" />
+                    ONP
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            @if (form().pensionType === 'AFP') {
+              <div class="field">
+                <label class="field-label" for="ef-afp">AFP</label>
+                <select id="ef-afp" class="field-select"
+                        [value]="form().afpName"
+                        (change)="setField('afpName', $any($event.target).value)">
+                  @for (afp of AFP_NAMES; track afp.value) {
+                    <option [value]="afp.value">{{ afp.label }} ({{ afp.rate }}%)</option>
+                  }
+                </select>
+              </div>
+            }
+
+            <div class="form-row form-row--2">
+              <div class="field">
+                <label class="field-label" for="ef-bank">Banco</label>
+                <select id="ef-bank" class="field-select"
+                        [value]="form().bankName"
+                        (change)="setField('bankName', $any($event.target).value)">
+                  @for (b of BANK_NAMES; track b) {
+                    <option [value]="b">{{ b }}</option>
+                  }
+                </select>
+              </div>
+              <div class="field">
+                <label class="field-label" for="ef-acct">N° de cuenta</label>
+                <input id="ef-acct" class="field-input field-input--mono" type="text"
+                       placeholder="191-1234567890-1-01"
+                       [value]="form().bankAccount"
+                       (input)="setField('bankAccount', $any($event.target).value)" />
+              </div>
+            </div>
+
+            @if (saveSuccess()) {
+              <div class="form-success" role="status">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Empleado {{ editingId() ? 'actualizado' : 'creado' }} correctamente.
+              </div>
+            }
+            @if (saveError()) {
+              <div class="form-error" role="alert">{{ saveError() }}</div>
+            }
+
+            <div class="form-actions">
+              <button class="btn-cancel-form" type="button" [disabled]="saving()" (click)="closeForm()">
+                Cancelar
+              </button>
+              <button class="btn-save" type="button"
+                      [disabled]="!isFormValid() || saving()"
+                      (click)="saveEmployee()">
+                @if (saving()) { <span class="spinner-sm"></span> }
+                {{ editingId() ? 'Guardar cambios' : 'Crear empleado' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- Employee list -->
+      @if (loadingEmployees()) {
+        <div class="table-skeleton">
+          @for (s of [1,2,3,4,5]; track s) {
+            <div class="skel-row">
+              <div class="skel skel--avatar"></div>
+              <div class="skel skel--name"></div>
+              <div class="skel skel--desc"></div>
+              <div class="skel skel--chip"></div>
+              <div class="skel skel--amt"></div>
+            </div>
+          }
+        </div>
+      } @else if (employeesError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ employeesError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryEmployees()">Reintentar</button>
+        </div>
+      } @else if (filteredEmployees().length === 0) {
+        <div class="tab-empty">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span>{{ employeeQuery() ? 'Sin empleados con ese criterio.' : 'No hay empleados. Crea el primero.' }}</span>
+        </div>
+      } @else {
+        <div class="acc-table-wrap">
+          <table class="acc-table" aria-label="Lista de empleados">
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th class="col-dni">DNI</th>
+                <th>Cargo</th>
+                <th>Área</th>
+                <th>Pensión</th>
+                <th class="col-amt">Sueldo base</th>
+                <th>Estado</th>
+                <th class="col-actions"></th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (emp of filteredEmployees(); track trackById($index, emp)) {
+                <tr [class.row--inactive]="emp.status === 'INACTIVE'">
+                  <td>
+                    <div class="emp-cell">
+                      <div class="emp-avatar" [attr.data-status]="emp.status" aria-hidden="true">
+                        {{ emp.firstName[0] ?? '' }}{{ emp.lastName[0] ?? '' }}
+                      </div>
+                      <div class="emp-info">
+                        <span class="emp-name">{{ emp.fullName }}</span>
+                        @if (emp.bankName) {
+                          <span class="emp-bank">{{ emp.bankName }}</span>
+                        }
+                      </div>
+                    </div>
+                  </td>
+                  <td class="col-dni mono">{{ emp.dni }}</td>
+                  <td>{{ emp.position }}</td>
+                  <td class="col-muted">{{ emp.department }}</td>
+                  <td>
+                    <span class="pension-chip" [attr.data-type]="emp.pensionType">
+                      {{ emp.pensionType === 'AFP' ? afpLabel(emp.afpName) : 'ONP' }}
+                    </span>
+                  </td>
+                  <td class="col-amt mono">S/ {{ emp.baseSalary | number:'1.2-2' }}</td>
+                  <td>
+                    <span class="status-chip" [attr.data-status]="emp.status">
+                      {{ emp.status === 'ACTIVE' ? 'Activo' : 'Inactivo' }}
+                    </span>
+                  </td>
+                  <td class="col-actions">
+                    <button class="btn-row-action" type="button"
+                            title="Editar" (click)="openEditForm(emp)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    @if (emp.status === 'ACTIVE') {
+                      @if (deactivateConfirmId() === emp.id) {
+                        <div class="deactivate-confirm">
+                          <span class="deactivate-confirm__txt">¿Dar de baja?</span>
+                          <button class="btn-confirm-deact" type="button"
+                                  [disabled]="deactivating()" (click)="confirmDeactivate()">
+                            @if (deactivating()) { <span class="spinner-sm"></span> } @else { Sí }
+                          </button>
+                          <button class="btn-cancel-deact" type="button"
+                                  [disabled]="deactivating()" (click)="cancelDeactivate()">
+                            No
+                          </button>
+                        </div>
+                      } @else {
+                        <button class="btn-row-action btn-row-action--danger" type="button"
+                                title="Dar de baja" (click)="requestDeactivate(emp.id)">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                          </svg>
+                        </button>
+                      }
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: PLANILLA MENSUAL
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'payroll') {
+    <div class="tab-content">
+
+      <!-- Process new payroll form -->
+      <div class="process-card">
+        <h2 class="process-card__title">Procesar planilla</h2>
+        <p class="process-card__sub">Calcula automáticamente remuneraciones, AFP/ONP, 5ta categoría y Essalud para todos los empleados activos.</p>
+
+        <div class="process-card__form">
+          <div class="field">
+            <label class="field-label" for="proc-year">Año</label>
+            <select id="proc-year" class="field-select field-select--sm"
+                    [value]="processYear()"
+                    (change)="processYear.set(+$any($event.target).value)">
+              @for (y of yearOptions(); track y) {
+                <option [value]="y">{{ y }}</option>
+              }
+            </select>
+          </div>
+          <div class="field">
+            <label class="field-label" for="proc-month">Mes</label>
+            <select id="proc-month" class="field-select field-select--sm"
+                    [value]="processMonth()"
+                    (change)="processMonth.set(+$any($event.target).value)">
+              @for (m of monthOptions; track m.value) {
+                <option [value]="m.value">{{ m.label }}</option>
+              }
+            </select>
+          </div>
+          <button class="btn-process" type="button"
+                  [disabled]="processing()" (click)="processPayroll()">
+            @if (processing()) { <span class="spinner-sm spinner-sm--white"></span> }
+            Calcular planilla
+          </button>
+        </div>
+
+        @if (processSuccess()) {
+          <div class="process-success" role="status">
+            Planilla calculada. Revisa los items abajo.
+          </div>
+        }
+        @if (processError()) {
+          <div class="form-error" role="alert">{{ processError() }}</div>
+        }
+      </div>
+
+      <!-- Payroll items table -->
+      @if (loadingPayroll()) {
+        <div class="tab-loading"><span class="spinner-sm"></span> Cargando planilla…</div>
+      } @else if (payrollError()) {
+        <div class="tab-error" role="alert">
+          <span>{{ payrollError() }}</span>
+          <button class="btn-retry" type="button" (click)="retryPayroll()">Reintentar</button>
+        </div>
+      } @else if (payrollItems().length > 0) {
+        <div class="acc-table-wrap">
+          <table class="acc-table payroll-table" aria-label="Detalle de planilla">
+            <thead>
+              <tr>
+                <th>Empleado</th>
+                <th class="col-amt">Días</th>
+                <th class="col-amt">Rem. Bruta</th>
+                <th class="col-amt">Asig. Fam.</th>
+                <th class="col-amt">AFP / ONP</th>
+                <th class="col-amt">5ta Cat.</th>
+                <th class="col-amt">Total Desc.</th>
+                <th class="col-amt">Neto</th>
+                <th class="col-amt">Essalud</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of payrollItems(); track item.id) {
+                <tr>
+                  <td>
+                    <div class="emp-mini">
+                      <span class="emp-mini__name">{{ item.employeeName }}</span>
+                      <span class="pension-chip pension-chip--sm" [attr.data-type]="item.pensionType">
+                        {{ item.pensionType === 'AFP' ? afpLabel(item.afpName) : 'ONP' }}
+                      </span>
+                    </div>
+                  </td>
+                  <td class="col-amt mono">{{ item.workedDays }}</td>
+                  <td class="col-amt mono">{{ item.grossSalary | number:'1.2-2' }}</td>
+                  <td class="col-amt mono">{{ item.assignacionFamiliar | number:'1.2-2' }}</td>
+                  <td class="col-amt mono">{{ item.pensionContribution | number:'1.2-2' }}</td>
+                  <td class="col-amt mono">{{ item.incomeTaxRetention | number:'1.2-2' }}</td>
+                  <td class="col-amt mono deduct">{{ item.totalDeductions | number:'1.2-2' }}</td>
+                  <td class="col-amt mono net-col fw-600">{{ item.netSalary | number:'1.2-2' }}</td>
+                  <td class="col-amt mono col-muted">{{ item.employerEssalud | number:'1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="payroll-totals">
+                <td>TOTALES ({{ payrollItems().length }} empleados)</td>
+                <td></td>
+                <td class="col-amt mono">{{ payrollTotals().bruto | number:'1.2-2' }}</td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td class="col-amt mono deduct">{{ payrollTotals().desc | number:'1.2-2' }}</td>
+                <td class="col-amt mono net-col fw-600">{{ payrollTotals().neto | number:'1.2-2' }}</td>
+                <td class="col-amt mono col-muted">{{ payrollTotals().essalud | number:'1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      } @else if (selectedPeriodId()) {
+        <div class="tab-empty">
+          <span>Esta planilla aún no tiene items. Procesa primero.</span>
+        </div>
+      }
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: BOLETAS
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'payslips') {
+    <div class="tab-content">
+
+      <div class="payslip-layout">
+
+        <!-- Employee selector -->
+        <div class="payslip-emp-list" aria-label="Seleccionar empleado">
+          <p class="payslip-emp-list__hint">Selecciona un empleado:</p>
+          @if (activeCount() === 0) {
+            <div class="tab-empty"><span>Sin empleados activos.</span></div>
+          } @else {
+            @for (emp of activeEmployees(); track trackById($index, emp)) {
+              <button class="emp-pick-btn" type="button"
+                      [class.emp-pick-btn--active]="selectedPayslipEmpId() === emp.id"
+                      (click)="selectPayslipEmployee(emp.id)">
+                <div class="emp-avatar emp-avatar--sm" aria-hidden="true">
+                  {{ emp.firstName[0] ?? '' }}{{ emp.lastName[0] ?? '' }}
+                </div>
+                <div class="emp-info">
+                  <span class="emp-name">{{ emp.fullName }}</span>
+                  <span class="emp-bank">{{ emp.position }}</span>
+                </div>
+              </button>
+            }
+          }
+        </div>
+
+        <!-- Payslip viewer -->
+        <div class="payslip-viewer" id="payslip-print-area">
+          @if (!selectedPayslipEmpId()) {
+            <div class="payslip-placeholder">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              <p>Selecciona un empleado para ver su boleta.</p>
+            </div>
+          } @else if (loadingPayslip()) {
+            <div class="tab-loading"><span class="spinner-sm"></span> Cargando boleta…</div>
+          } @else if (payslipError()) {
+            <div class="tab-error" role="alert"><span>{{ payslipError() }}</span></div>
+          } @else {
+            @if (payslipItem(); as item) {
+            <div class="payslip-card">
+
+              <div class="payslip-card__head">
+                <div class="payslip-brand">
+                  <span class="payslip-brand__company">MotoStore</span>
+                  <span class="payslip-brand__ruc">RUC: 20XXXXXXXXXX</span>
+                </div>
+                <div class="payslip-period-tag">
+                  @if (selectedPeriod(); as p) { Boleta · {{ periodLabel(p) }} }
+                </div>
+              </div>
+
+              <div class="payslip-emp-info">
+                <div class="payslip-row"><span>Empleado</span><strong>{{ item.employeeName }}</strong></div>
+                <div class="payslip-row"><span>DNI</span><strong class="mono">{{ item.dni }}</strong></div>
+                <div class="payslip-row"><span>Cargo</span><strong>{{ item.position }}</strong></div>
+                <div class="payslip-row"><span>Días trabajados</span><strong>{{ item.workedDays }}</strong></div>
+                <div class="payslip-row"><span>Sistema pensionario</span>
+                  <strong>{{ item.pensionType === 'AFP' ? afpLabel(item.afpName) : 'ONP (13%)' }}</strong>
+                </div>
+              </div>
+
+              <div class="payslip-section">
+                <div class="payslip-section__head">REMUNERACIONES</div>
+                <div class="payslip-row">
+                  <span>Sueldo base</span>
+                  <span class="mono">S/ {{ item.baseSalary | number:'1.2-2' }}</span>
+                </div>
+                @if (item.assignacionFamiliar > 0) {
+                  <div class="payslip-row">
+                    <span>Asignación familiar</span>
+                    <span class="mono">S/ {{ item.assignacionFamiliar | number:'1.2-2' }}</span>
+                  </div>
+                }
+                <div class="payslip-row payslip-row--sub">
+                  <span>Total remuneraciones</span>
+                  <span class="mono fw-600">S/ {{ item.grossSalary | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              <div class="payslip-section">
+                <div class="payslip-section__head">DESCUENTOS</div>
+                <div class="payslip-row">
+                  <span>{{ item.pensionType === 'AFP' ? afpLabel(item.afpName) : 'ONP (13%)' }}</span>
+                  <span class="mono">S/ {{ item.pensionContribution | number:'1.2-2' }}</span>
+                </div>
+                @if (item.incomeTaxRetention > 0) {
+                  <div class="payslip-row">
+                    <span>Ret. 5ta categoría</span>
+                    <span class="mono">S/ {{ item.incomeTaxRetention | number:'1.2-2' }}</span>
+                  </div>
+                }
+                @if (item.otherDeductions > 0) {
+                  <div class="payslip-row">
+                    <span>Otros descuentos</span>
+                    <span class="mono">S/ {{ item.otherDeductions | number:'1.2-2' }}</span>
+                  </div>
+                }
+                <div class="payslip-row payslip-row--sub">
+                  <span>Total descuentos</span>
+                  <span class="mono fw-600">S/ {{ item.totalDeductions | number:'1.2-2' }}</span>
+                </div>
+              </div>
+
+              <div class="payslip-neto">
+                <span>NETO A PAGAR</span>
+                <span class="payslip-neto__amt">S/ {{ item.netSalary | number:'1.2-2' }}</span>
+              </div>
+
+              <div class="payslip-essalud">
+                <span class="payslip-essalud__label">Aporte Essalud (empleador 9%)</span>
+                <span class="mono">S/ {{ item.employerEssalud | number:'1.2-2' }}</span>
+              </div>
+
+            </div>
+
+            <div class="payslip-actions no-print">
+              <button class="btn-print" type="button" (click)="printPayslip()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <polyline points="6 9 6 2 18 2 18 9"/>
+                  <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                  <rect x="6" y="14" width="12" height="8"/>
+                </svg>
+                Imprimir / Guardar PDF
+              </button>
+            </div>
+            }
+          }
+        </div>
+
+      </div>
+
+    </div>
+  }
+
+  <!-- ══════════════════════════════════════════════════════════════
+       TAB: PLAME
+  ══════════════════════════════════════════════════════════════ -->
+  @if (activeTab() === 'plame') {
+    <div class="tab-content">
+
+      <div class="plame-card">
+        <div class="plame-card__icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+        </div>
+        <h2 class="plame-card__title">Exportar PLAME</h2>
+        <p class="plame-card__desc">
+          Genera el archivo TXT en formato SUNAT PLAME con los datos del período seleccionado.
+          Importa el archivo directamente en el sistema T-REGISTRO de SUNAT.
+        </p>
+
+        @if (selectedPeriod(); as period) {
+          <div class="plame-meta">
+            <div class="plame-row"><span>Período</span><strong>{{ periodLabel(period) }}</strong></div>
+            <div class="plame-row"><span>Estado planilla</span>
+              <strong>{{ PAYROLL_STATUS_LABEL[period.status] }}</strong>
+            </div>
+            <div class="plame-row"><span>Empleados</span><strong>{{ payrollItems().length }}</strong></div>
+            <div class="plame-row"><span>Masa salarial neta</span>
+              <strong class="mono">S/ {{ period.totalNeto | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+        }
+
+        @if (plameError()) {
+          <div class="form-error" role="alert">{{ plameError() }}</div>
+        }
+
+        <button class="btn-export-plame" type="button"
+                [disabled]="exportingPlame() || !selectedPeriodId()"
+                (click)="exportPlame()">
+          @if (exportingPlame()) {
+            <span class="spinner-sm spinner-sm--white"></span>
+            Generando…
+          } @else {
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            Descargar PLAME.txt
+          }
+        </button>
+
+        <div class="plame-note">
+          El formato incluye: período, DNI, nombres, días trabajados, remuneración, sistema pensionario, aportes AFP/ONP, retención 5ta categoría y Essalud del empleador.
+        </div>
+      </div>
+
+    </div>
+  }
+
+</div>

@@ -1,0 +1,270 @@
+// ── KPI Strip ─────────────────────────────────────────────────────
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  margin-bottom: 28px;
+
+  @media (max-width: 640px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.kpi-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: row-enter 160ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--idx, 0) * 40ms);
+
+  &--accent .kpi-value { color: var(--accent); }
+}
+
+.kpi-value {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1;
+}
+
+.kpi-label {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+// ── Goal Section ──────────────────────────────────────────────────
+.goal-section {
+  margin-bottom: 32px;
+}
+
+.section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+
+.goal-bars {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.goal-bar-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-bar-labels {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.goal-bar-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-2);
+}
+
+.goal-bar-progress {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.goal-bar-track {
+  height: 8px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.goal-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 500ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  &--done { background: var(--success, #16a34a); }
+}
+
+.goal-notes {
+  font-size: 12.5px;
+  color: var(--ink-3);
+  font-style: italic;
+  margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+// ── Opp Table ─────────────────────────────────────────────────────
+.opp-section,
+.won-section { margin-bottom: 32px; }
+
+.opp-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.opp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+
+  th {
+    padding: 10px 16px;
+    text-align: left;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-3);
+    background: var(--surface-alt, var(--surface));
+    border-bottom: 1px solid var(--border);
+  }
+
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+}
+
+.opp-row {
+  animation: row-enter 160ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--idx, 0) * 20ms);
+  &:hover td { background: var(--surface-alt, rgba(0,0,0,.02)); }
+}
+
+.opp-id, .opp-date { font-variant-numeric: tabular-nums; font-size: 13px; }
+.muted { color: var(--ink-3); }
+
+// ── Stage badges ──────────────────────────────────────────────────
+.stage-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--border);
+  color: var(--ink-2);
+
+  &.stage--new        { background: oklch(94% 0.01 250); color: oklch(45% 0.06 250); }
+  &.stage--contacted  { background: oklch(94% 0.03 210); color: oklch(40% 0.1 210); }
+  &.stage--demo       { background: oklch(94% 0.04 290); color: oklch(42% 0.12 290); }
+  &.stage--proposal   { background: oklch(93% 0.05 55);  color: oklch(42% 0.14 55); }
+  &.stage--negotiation{ background: oklch(93% 0.05 30);  color: oklch(42% 0.14 30); }
+  &.stage--won        { background: oklch(92% 0.06 145); color: oklch(38% 0.12 145); }
+  &.stage--lost       { background: oklch(93% 0.04 15);  color: oklch(42% 0.12 15); }
+}
+
+// ── Advance button ────────────────────────────────────────────────
+.btn-advance {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+
+  &:hover:not(:disabled) { background: var(--accent); color: #fff; border-color: var(--accent); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+// ── Won list ──────────────────────────────────────────────────────
+.won-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.won-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  animation: row-enter 160ms cubic-bezier(0.16, 1, 0.3, 1) backwards;
+  animation-delay: calc(var(--idx, 0) * 25ms);
+}
+
+.won-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: oklch(92% 0.06 145);
+  color: oklch(38% 0.12 145);
+  font-size: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.won-id   { font-size: 13px; font-weight: 500; color: var(--ink); flex: 1; font-variant-numeric: tabular-nums; }
+.won-date { font-size: 12.5px; }
+
+// ── Skeleton ──────────────────────────────────────────────────────
+.mp-skeleton { display: flex; flex-direction: column; gap: 20px; }
+
+.sk-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.sk-kpi-card { height: 88px; border-radius: 12px; }
+
+.sk-block {
+  height: 120px;
+  border-radius: 12px;
+}
+
+.sk-shimmer {
+  background: linear-gradient(90deg, var(--border) 25%, var(--surface-alt, #e8e8e8) 50%, var(--border) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+}
+
+// ── Error ─────────────────────────────────────────────────────────
+.empty-hint { font-size: 14px; color: var(--ink-3); padding: 24px 0; }
+.mp-error   { font-size: 14px; color: var(--danger, #dc2626); padding: 16px; border: 1px solid var(--danger, #dc2626); border-radius: 8px; }
+
+// ── Animations ────────────────────────────────────────────────────
+@keyframes row-enter {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kpi-card, .opp-row, .won-item { animation: none; }
+  .goal-bar-fill { transition: none; }
+}

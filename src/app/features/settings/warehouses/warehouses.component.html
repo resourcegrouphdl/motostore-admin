@@ -1,0 +1,261 @@
+<!-- ── Summary strip ─────────────────────────────────────────── -->
+<div class="wh-summary">
+  <div class="wh-stat">
+    <span class="stat-num">{{ warehouses().length }}</span>
+    <span class="stat-label">almacenes</span>
+  </div>
+  <div class="stat-div" aria-hidden="true"></div>
+  <div class="wh-stat">
+    <span class="stat-num">{{ activeCount() }}</span>
+    <span class="stat-label">activos</span>
+  </div>
+  <div class="stat-div" aria-hidden="true"></div>
+  <div class="wh-stat">
+    <span class="stat-num">{{ showroomCount() }}</span>
+    <span class="stat-label">en exhibición</span>
+  </div>
+  <button class="btn-add" type="button" (click)="openCreate()" aria-label="Agregar almacén">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
+    Nuevo almacén
+  </button>
+</div>
+
+<!-- ── Error ─────────────────────────────────────────────────── -->
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Loading ───────────────────────────────────────────────── -->
+@if (loading()) {
+  <div class="wh-grid">
+    @for (s of [1,2,3]; track s) {
+      <div class="wh-card wh-card--skel">
+        <span class="skel skel--code"></span>
+        <span class="skel skel--name"></span>
+        <span class="skel skel--badge"></span>
+      </div>
+    }
+  </div>
+}
+
+<!-- ── Grid ──────────────────────────────────────────────────── -->
+@if (!loading() && !error()) {
+  @if (warehouses().length === 0) {
+    <div class="empty-state">
+      <p class="empty-title">Sin almacenes configurados</p>
+      <p class="empty-sub">Crea el primer almacén para empezar a gestionar el inventario.</p>
+      <button class="btn-add" type="button" (click)="openCreate()">
+        Crear primer almacén
+      </button>
+    </div>
+  } @else {
+    <div class="wh-grid">
+      @for (w of warehouses(); track w.id; let i = $index) {
+        <div class="wh-card" [class.wh-card--inactive]="!w.active" [style.--idx]="animIdx(i)">
+
+          <!-- Header -->
+          <div class="wh-card-header">
+            <div class="wh-code-wrap">
+              <span class="wh-code">{{ w.code }}</span>
+              @if (w.publicFacing) {
+                <span class="pub-badge" title="Visible en catálogo público">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  Público
+                </span>
+              }
+            </div>
+            <span class="type-badge" [attr.data-color]="TYPE_COLOR[w.type]">
+              {{ TYPE_LABEL[w.type] }}
+            </span>
+          </div>
+
+          <!-- Name + address -->
+          <div class="wh-info">
+            <p class="wh-name">{{ w.name }}</p>
+            @if (w.address) {
+              <p class="wh-address">{{ w.address }}</p>
+            }
+          </div>
+
+          <!-- Status + actions -->
+          <div class="wh-footer">
+            <button
+              class="status-toggle"
+              [class.status-toggle--active]="w.active"
+              type="button"
+              (click)="toggleActive(w)"
+              [attr.aria-label]="w.active ? 'Desactivar almacén' : 'Activar almacén'">
+              <span class="toggle-dot" aria-hidden="true"></span>
+              {{ w.active ? 'Activo' : 'Inactivo' }}
+            </button>
+            <button class="edit-btn" type="button" (click)="openEdit(w)" aria-label="Editar almacén">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                   stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Editar
+            </button>
+          </div>
+
+        </div>
+      }
+    </div>
+  }
+}
+
+<!-- ── Create dialog ─────────────────────────────────────────── -->
+@if (createOpen()) {
+  <div class="dialog-backdrop" (click)="closeCreate()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="createOpen()"
+       role="dialog" aria-modal="true" aria-label="Nuevo almacén">
+  <div class="dialog-header">
+    <h2 class="dialog-title">Nuevo almacén</h2>
+    <button class="dialog-close" type="button" (click)="closeCreate()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <form class="dialog-body" (ngSubmit)="submitCreate()" #cf="ngForm" novalidate>
+
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label" for="cw-code">Código <span class="req">*</span></label>
+        <input id="cw-code" class="field-input" type="text" name="code"
+               placeholder="ALM-01" maxlength="20" autocomplete="off"
+               [(ngModel)]="createForm.code" required
+               #codeField="ngModel"
+               [class.field-input--err]="codeField.invalid && codeField.touched">
+        <span class="field-hint">Mayúsculas y guiones — se convierte automáticamente</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cw-name">Nombre <span class="req">*</span></label>
+      <input id="cw-name" class="field-input" type="text" name="name"
+             placeholder="Almacén Principal Lima" autocomplete="off"
+             [(ngModel)]="createForm.name" required
+             #nameField="ngModel"
+             [class.field-input--err]="nameField.invalid && nameField.touched">
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cw-type">Tipo <span class="req">*</span></label>
+      <select id="cw-type" class="field-select" name="type"
+              [(ngModel)]="createForm.type" required>
+        @for (t of ALL_TYPES; track t) {
+          <option [value]="t">{{ TYPE_LABEL[t] }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="cw-addr">Dirección</label>
+      <input id="cw-addr" class="field-input" type="text" name="address"
+             placeholder="Av. Example 123, Lima"
+             [(ngModel)]="createForm.address">
+    </div>
+
+    <label class="check-row">
+      <input type="checkbox" name="publicFacing" class="check-input"
+             [(ngModel)]="createForm.publicFacing">
+      <span class="check-label">
+        <strong>Visible en catálogo público</strong>
+        <span class="check-sub">Las motos de este almacén aparecerán en la tienda online</span>
+      </span>
+    </label>
+
+    @if (createError()) {
+      <div class="form-error" role="alert">{{ createError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeCreate()" [disabled]="createSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit" [disabled]="cf.invalid || createSubmitting()">
+        @if (createSubmitting()) { <span class="spinner"></span> Creando… }
+        @else { Crear almacén }
+      </button>
+    </div>
+  </form>
+</aside>
+
+<!-- ── Edit dialog ────────────────────────────────────────────── -->
+@if (editTarget()) {
+  <div class="dialog-backdrop" (click)="closeEdit()" aria-hidden="true"></div>
+}
+<aside class="side-dialog" [class.side-dialog--open]="!!editTarget()"
+       role="dialog" aria-modal="true" aria-label="Editar almacén">
+  <div class="dialog-header">
+    <h2 class="dialog-title">{{ editTarget()?.name ?? 'Editar almacén' }}</h2>
+    <button class="dialog-close" type="button" (click)="closeEdit()" aria-label="Cerrar">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </div>
+  <form class="dialog-body" (ngSubmit)="submitEdit()" #ef="ngForm" novalidate>
+
+    <div class="field">
+      <label class="field-label" for="ew-name">Nombre <span class="req">*</span></label>
+      <input id="ew-name" class="field-input" type="text" name="ename"
+             [(ngModel)]="editForm.name" required>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="ew-type">Tipo <span class="req">*</span></label>
+      <select id="ew-type" class="field-select" name="etype"
+              [(ngModel)]="editForm.type" required>
+        @for (t of ALL_TYPES; track t) {
+          <option [value]="t">{{ TYPE_LABEL[t] }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="ew-addr">Dirección</label>
+      <input id="ew-addr" class="field-input" type="text" name="eaddr"
+             [(ngModel)]="editForm.address">
+    </div>
+
+    <label class="check-row">
+      <input type="checkbox" name="epublic" class="check-input"
+             [(ngModel)]="editForm.publicFacing">
+      <span class="check-label">
+        <strong>Visible en catálogo público</strong>
+        <span class="check-sub">Las motos de este almacén aparecerán en la tienda online</span>
+      </span>
+    </label>
+
+    <label class="check-row check-row--danger">
+      <input type="checkbox" name="eactive" class="check-input"
+             [(ngModel)]="editForm.active">
+      <span class="check-label">
+        <strong>Almacén activo</strong>
+        <span class="check-sub">Desmarca para desactivar sin eliminar el almacén</span>
+      </span>
+    </label>
+
+    @if (editError()) {
+      <div class="form-error" role="alert">{{ editError() }}</div>
+    }
+
+    <div class="dialog-footer">
+      <button class="btn-cancel" type="button" (click)="closeEdit()" [disabled]="editSubmitting()">Cancelar</button>
+      <button class="btn-submit" type="submit" [disabled]="ef.invalid || editSubmitting()">
+        @if (editSubmitting()) { <span class="spinner"></span> Guardando… }
+        @else { Guardar cambios }
+      </button>
+    </div>
+  </form>
+</aside>

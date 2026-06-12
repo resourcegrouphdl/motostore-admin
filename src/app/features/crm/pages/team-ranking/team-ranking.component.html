@@ -1,0 +1,121 @@
+<!-- ── KPI strip ──────────────────────────────────────────── -->
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <span class="kpi-val">{{ ranking().length }}</span>
+    <span class="kpi-label">vendedores</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-val kpi-val--won">{{ totalWon() }}</span>
+    <span class="kpi-label">oportunidades ganadas</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-val kpi-val--rate">{{ avgWinRate() }}%</span>
+    <span class="kpi-label">win rate equipo</span>
+  </div>
+  <div class="kpi-div"></div>
+  <div class="kpi-item">
+    <span class="kpi-val">{{ totalActive() }}</span>
+    <span class="kpi-label">oportunidades activas</span>
+  </div>
+</div>
+
+@if (error()) {
+  <div class="error-banner" role="alert">{{ error() }}</div>
+}
+
+<!-- ── Loading ────────────────────────────────────────────── -->
+@if (loading()) {
+  <div class="ranking-grid">
+    @for (s of [1,2,3]; track s) {
+      <div class="rank-card rank-card--skel">
+        <div class="skel skel--avatar"></div>
+        <div class="skel skel--name"></div>
+        <div class="skel skel--stat"></div>
+        <div class="skel skel--bar"></div>
+      </div>
+    }
+  </div>
+}
+
+<!-- ── Empty ─────────────────────────────────────────────── -->
+@if (!loading() && ranking().length === 0 && !error()) {
+  <div class="empty-state">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+         stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+         class="empty-icon" aria-hidden="true">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+      <circle cx="9" cy="7" r="4"/>
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+      <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+    </svg>
+    <p>Sin oportunidades registradas aún.</p>
+    <span class="empty-hint">El ranking se construye con las oportunidades del pipeline.</span>
+  </div>
+}
+
+<!-- ── Ranking cards ──────────────────────────────────────── -->
+@if (!loading() && ranking().length > 0) {
+  <div class="ranking-grid">
+    @for (entry of ranking(); track entry.sellerUid; let i = $index) {
+      <div class="rank-card" [style.--idx]="animIdx(i)"
+           [class.rank-card--top]="i === 0">
+
+        <div class="rank-pos">
+          @if (i < 3) {
+            <span class="medal" [attr.aria-label]="'Posición ' + (i + 1)">{{ medal(i) }}</span>
+          } @else {
+            <span class="pos-num">{{ i + 1 }}</span>
+          }
+        </div>
+
+        <!-- Avatar -->
+        <div class="avatar" [style.--hue]="avatarHue(entry.sellerUid)"
+             [attr.aria-label]="entry.sellerName">
+          {{ initials(entry.sellerName) }}
+        </div>
+
+        <div class="seller-info">
+          <span class="seller-name">{{ entry.sellerName }}</span>
+          <span class="seller-uid">{{ entry.sellerUid.slice(0,12) }}…</span>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats-row">
+          <div class="stat">
+            <span class="stat-val stat-val--won">{{ entry.wonCount }}</span>
+            <span class="stat-label">ganadas</span>
+          </div>
+          <div class="stat">
+            <span class="stat-val">{{ entry.activeCount }}</span>
+            <span class="stat-label">activas</span>
+          </div>
+          <div class="stat">
+            <span class="stat-val stat-val--lost">{{ entry.lostCount }}</span>
+            <span class="stat-label">perdidas</span>
+          </div>
+          <div class="stat">
+            <span class="stat-val stat-val--days">{{ entry.avgDaysToClose | number:'1.0-1' }}</span>
+            <span class="stat-label">días cierre</span>
+          </div>
+        </div>
+
+        <!-- Win-rate bar -->
+        <div class="wr-row">
+          <span class="wr-label">Win rate</span>
+          <div class="wr-bar-wrap" role="progressbar"
+               [attr.aria-valuenow]="entry.winRate"
+               aria-valuemin="0" aria-valuemax="100">
+            <div class="wr-bar" [style.--wr]="entry.winRate + '%'"
+                 [class.wr-bar--high]="entry.winRate >= 60"
+                 [class.wr-bar--mid]="entry.winRate >= 30 && entry.winRate < 60"
+                 [class.wr-bar--low]="entry.winRate < 30"></div>
+          </div>
+          <span class="wr-pct">{{ entry.winRate | number:'1.0-1' }}%</span>
+        </div>
+
+      </div>
+    }
+  </div>
+}

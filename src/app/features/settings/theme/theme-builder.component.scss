@@ -1,0 +1,715 @@
+$ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+:host { display: block; }
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+.tb-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 32px;
+  align-items: start;
+  padding: 4px 0 40px;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ─── Editor panel ─────────────────────────────────────────────────────────────
+
+.tb-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.tb-editor-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tb-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tb-title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+  margin: 0;
+}
+
+// Motion (c): dirty badge enter
+.tb-dirty-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  background: oklch(0.97 0.04 80);
+  color: oklch(0.42 0.12 60);
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: opacity 160ms $ease-expo, transform 160ms $ease-expo;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+.tb-dirty-dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: oklch(0.55 0.18 60);
+}
+
+.tb-info-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  background: var(--bg-2);
+  border: 1px solid var(--hairline);
+  font-size: 12.5px;
+  color: var(--ink-2, var(--ink));
+  line-height: 1.5;
+  margin: 0;
+
+  svg { flex-shrink: 0; margin-top: 1px; opacity: 0.6; }
+  strong { color: var(--ink); }
+}
+
+// ─── Sections ─────────────────────────────────────────────────────────────────
+
+.tb-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tb-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-3, var(--ink));
+  opacity: 0.55;
+  margin: 0;
+}
+
+// ─── Color controls ────────────────────────────────────────────────────────────
+
+.tb-color-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tb-color-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tb-color-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.tb-color-hint {
+  font-size: 12px;
+  color: var(--ink);
+  opacity: 0.45;
+}
+
+.tb-color-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+// Motion (b): swatch pulse on color confirm
+.tb-swatch-label {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &.swatch-anim .tb-swatch-preview {
+    animation: swatch-confirm 300ms $ease-expo forwards;
+  }
+}
+
+.tb-swatch-preview {
+  width: 100%;
+  height: 100%;
+}
+
+.tb-color-native {
+  position: absolute;
+  inset: 0;
+  width: 200%;
+  height: 200%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+@keyframes swatch-confirm {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.tb-hex-input {
+  width: 88px;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--surface);
+  outline: none;
+
+  &:focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+}
+
+.tb-contrast-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  font-size: 11.5px;
+  font-weight: 600;
+
+  &.contrast--ok {
+    background: oklch(0.94 0.05 152);
+    color: oklch(0.38 0.14 152);
+  }
+  &.contrast--warn {
+    background: oklch(0.97 0.04 80);
+    color: oklch(0.38 0.15 55);
+  }
+}
+
+.tb-contrast-warn {
+  font-size: 12px;
+  color: oklch(0.42 0.12 60);
+  margin: 0;
+  line-height: 1.45;
+  padding: 6px 10px;
+  background: oklch(0.98 0.02 80);
+  border-radius: var(--r-sm);
+  border-left: 3px solid oklch(0.70 0.14 60);
+}
+
+// ─── Font grid ─────────────────────────────────────────────────────────────────
+
+.tb-font-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tb-font-btn {
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 120ms ease, background 120ms ease, color 120ms ease;
+
+  &:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  &--active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+}
+
+// ─── Radius presets ────────────────────────────────────────────────────────────
+
+.tb-radius-row {
+  display: flex;
+  gap: 8px;
+}
+
+.tb-radius-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink);
+  transition: border-color 120ms ease, background 120ms ease;
+
+  &:hover { border-color: var(--accent); background: var(--accent-soft); }
+
+  &--active {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-ink);
+    font-weight: 600;
+  }
+}
+
+.tb-radius-icon {
+  display: block;
+  width: 32px;
+  height: 20px;
+  background: currentColor;
+  opacity: 0.25;
+
+  &[data-preset='square']  { border-radius: 2px; }
+  &[data-preset='rounded'] { border-radius: 6px; }
+  &[data-preset='pill']    { border-radius: 999px; }
+}
+
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
+.tb-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.tb-btn-discard {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  background: transparent;
+  font-size: 13.5px;
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+
+  &:hover { background: var(--bg-2); border-color: var(--ink); }
+}
+
+// Motion (d): save button state swap
+.tb-btn-save {
+  position: relative;
+  min-width: 136px;
+  height: 38px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--r-sm);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  transition: background 200ms ease, opacity 120ms ease;
+
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+  &:not(:disabled):hover { filter: brightness(1.08); }
+
+  .btn-label,
+  .btn-spinner,
+  .btn-check {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: opacity 80ms ease, transform 80ms ease;
+  }
+
+  .btn-spinner,
+  .btn-check { opacity: 0; }
+
+  &.state-loading {
+    .btn-label   { opacity: 0; transform: scale(0.85); }
+    .btn-spinner { opacity: 1; transform: scale(1);
+      svg { animation: spin 700ms linear infinite; }
+    }
+  }
+
+  &.state-success {
+    background: oklch(0.50 0.17 152);
+
+    .btn-label   { opacity: 0; }
+    .btn-spinner { opacity: 0; }
+    .btn-check   {
+      opacity: 1;
+      animation: check-enter 200ms $ease-expo both;
+    }
+  }
+
+  &.state-error {
+    background: oklch(0.48 0.20 18);
+    .btn-label { opacity: 1; }
+  }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes check-enter {
+  from { opacity: 0; transform: scale(0.5); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.tb-save-error {
+  font-size: 12.5px;
+  color: oklch(0.48 0.20 18);
+}
+
+// ─── Preview panel ────────────────────────────────────────────────────────────
+
+.tb-preview-panel {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tb-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.tb-preview-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  opacity: 0.55;
+  margin: 0;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tb-mock-frame {
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.tb-mock-browser {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+}
+
+.tb-mock-dots {
+  display: flex;
+  gap: 4px;
+
+  span {
+    display: block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+
+    &:first-child  { background: oklch(0.75 0.12 25); }
+    &:nth-child(2) { background: oklch(0.75 0.10 80); }
+    &:last-child   { background: oklch(0.65 0.14 145); }
+  }
+}
+
+.tb-mock-url {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--ink);
+  opacity: 0.45;
+  flex: 1;
+  text-align: center;
+}
+
+// ─── Mock store — motion (a): CSS vars transition on their computed values ─────
+
+.tb-mock-store {
+  background: var(--mock-bg, #fff);
+  font-family: var(--mock-font, 'Inter', system-ui);
+  color: var(--mock-ink, #0f172a);
+  min-height: 340px;
+
+  &.font-changing {
+    .tb-mk-logo,
+    .tb-mk-hero-title,
+    .tb-mk-hero-sub,
+    .tb-mk-hero-eyebrow,
+    .tb-mk-card-name,
+    .tb-mk-card-brand,
+    .tb-mk-card-price,
+    .tb-mk-nav-links {
+      filter: blur(3px);
+      transition: filter 60ms ease;
+    }
+  }
+
+  .tb-mk-logo,
+  .tb-mk-hero-title,
+  .tb-mk-hero-sub,
+  .tb-mk-hero-eyebrow,
+  .tb-mk-card-name,
+  .tb-mk-card-brand,
+  .tb-mk-card-price,
+  .tb-mk-nav-links {
+    transition: filter 80ms ease, color 80ms ease;
+  }
+}
+
+.tb-mk-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--mock-bg, #fff);
+  border-bottom: 1px solid rgba(0,0,0,0.07);
+  transition: background 80ms ease;
+}
+
+.tb-mk-logo {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--mock-ink, #0f172a);
+}
+
+.tb-mk-nav-links {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--mock-ink, #0f172a);
+  opacity: 0.65;
+}
+
+.tb-mk-hero {
+  padding: 24px 20px;
+  background: var(--mock-bg, #fff);
+  transition: background 80ms ease;
+}
+
+.tb-mk-hero-eyebrow {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--mock-primary, #2563eb);
+  margin: 0 0 6px;
+  transition: color 80ms ease;
+}
+
+.tb-mk-hero-title {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--mock-ink, #0f172a);
+  margin: 0 0 6px;
+  line-height: 1.2;
+}
+
+.tb-mk-hero-sub {
+  font-size: 12px;
+  color: var(--mock-ink, #0f172a);
+  opacity: 0.6;
+  margin: 0 0 14px;
+}
+
+.tb-mk-hero-ctas {
+  display: flex;
+  gap: 8px;
+}
+
+// Motion: buttons use CSS vars with 80ms ease
+.tb-mk-btn {
+  padding: 7px 14px;
+  border: none;
+  border-radius: var(--mock-radius, 12px);
+  font-family: var(--mock-font, 'Inter', system-ui);
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: default;
+  transition: background-color 80ms ease, color 80ms ease, border-color 80ms ease,
+              border-radius 200ms $ease-expo;
+
+  &--primary {
+    background: var(--mock-primary, #2563eb);
+    color: #fff;
+  }
+
+  &--outline {
+    background: transparent;
+    color: var(--mock-primary, #2563eb);
+    border: 1.5px solid var(--mock-primary, #2563eb);
+    padding: 6px 13px;
+  }
+
+  &--sm {
+    font-size: 10px;
+    padding: 5px 10px;
+    margin-top: 8px;
+  }
+}
+
+.tb-mk-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 16px;
+}
+
+.tb-mk-card {
+  border-radius: var(--mock-radius, 12px);
+  background: var(--mock-bg, #fff);
+  border: 1px solid rgba(0,0,0,0.08);
+  overflow: hidden;
+  transition: border-radius 200ms $ease-expo, background 80ms ease;
+}
+
+.tb-mk-card-img {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.04);
+
+  svg {
+    width: 80px;
+    height: 48px;
+    color: var(--mock-ink, #0f172a);
+    opacity: 0.35;
+  }
+}
+
+.tb-mk-card-body {
+  padding: 10px 12px;
+}
+
+.tb-mk-card-brand {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--mock-primary, #2563eb);
+  margin: 0;
+  transition: color 80ms ease;
+}
+
+.tb-mk-card-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mock-ink, #0f172a);
+  margin: 2px 0;
+}
+
+.tb-mk-card-price {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--mock-ink, #0f172a);
+  margin: 0;
+}
+
+// ─── Toast — motion (e) ────────────────────────────────────────────────────────
+
+.tb-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+  transition: opacity 200ms $ease-expo, transform 200ms $ease-expo,
+              filter 200ms $ease-expo;
+
+  @starting-style {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(4px);
+  }
+
+  &.toast-hiding {
+    opacity: 0;
+    transform: translateY(6px);
+    filter: blur(2px);
+    transition-duration: 160ms;
+  }
+}
+
+.tb-toast-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  margin: 0 0 2px;
+}
+
+.tb-toast-sub {
+  font-size: 12px;
+  color: var(--ink);
+  opacity: 0.55;
+  margin: 0;
+}
+
+// ─── prefers-reduced-motion ────────────────────────────────────────────────────
+
+@media (prefers-reduced-motion: reduce) {
+  .tb-dirty-badge,
+  .tb-swatch-preview,
+  .tb-font-btn,
+  .tb-radius-btn,
+  .tb-mk-btn,
+  .tb-mk-card,
+  .tb-mk-nav,
+  .tb-mk-hero,
+  .tb-mk-hero-eyebrow,
+  .tb-mk-hero-title,
+  .tb-mk-hero-sub,
+  .tb-mk-card-brand,
+  .tb-mk-card-name,
+  .tb-mk-card-price,
+  .tb-mk-nav-links,
+  .tb-btn-save,
+  .tb-btn-save .btn-label,
+  .tb-btn-save .btn-spinner,
+  .tb-btn-save .btn-check,
+  .tb-toast {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
