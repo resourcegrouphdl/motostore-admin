@@ -1,7 +1,11 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService } from '../../../core/services/auth.service';
+import { TenantSessionService, TenantInfo } from '../../../core/services/tenant-session.service';
+import { TenantsApiService } from '../../../core/services/tenants-api.service';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -11,8 +15,10 @@ import { AuthService } from '../../../core/services/auth.service';
   styleUrl: './login.component.scss',
 })
 export class LoginComponent {
-  private auth   = inject(AuthService);
-  private router = inject(Router);
+  private auth          = inject(AuthService);
+  private router        = inject(Router);
+  private tenantSession = inject(TenantSessionService);
+  private tenantsApi    = inject(TenantsApiService);
 
   // ── Login ──────────────────────────────────────────────────────
   form = new FormGroup({
@@ -24,6 +30,10 @@ export class LoginComponent {
   error    = signal('');
   hidePass = signal(true);
 
+  // ── Tenant picker ──────────────────────────────────────────────
+  tenantPickerMode  = signal(false);
+  availableTenants  = signal<TenantInfo[]>([]);
+
   async onSubmit() {
     if (this.form.invalid) {
       this.form.markAllAsTouched();
@@ -33,11 +43,47 @@ export class LoginComponent {
     this.error.set('');
     try {
       await this.auth.signIn(this.form.value.email!, this.form.value.password!);
-      this.router.navigate(['/staff']);
+      await this.resolveAndNavigate();
     } catch {
       this.error.set('Email o contraseña incorrectos.');
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  selectTenant(info: TenantInfo): void {
+    this.tenantSession.select(info.tenantSlug);
+    this.router.navigate(['/staff']);
+  }
+
+  private async resolveAndNavigate(): Promise<void> {
+    try {
+      const tenants = await firstValueFrom(this.tenantsApi.getMyTenants());
+      this.tenantSession.tenants.set(tenants);
+
+      if (tenants.length === 1) {
+        this.tenantSession.select(tenants[0].tenantSlug);
+        this.router.navigate(['/staff']);
+      } else if (tenants.length > 1) {
+        this.availableTenants.set(tenants);
+        this.tenantPickerMode.set(true);
+      } else {
+        // Sin asignaciones: usar fallback del environment (dev) o mostrar error
+        if (environment.tenantSlug) {
+          this.tenantSession.select(environment.tenantSlug);
+          this.router.navigate(['/staff']);
+        } else {
+          this.error.set('Tu cuenta no está asignada a ninguna tienda. Contacta al administrador.');
+        }
+      }
+    } catch {
+      // Endpoint no disponible (ej: backend sin migración): fallback a env
+      if (environment.tenantSlug) {
+        this.tenantSession.select(environment.tenantSlug);
+        this.router.navigate(['/staff']);
+      } else {
+        this.router.navigate(['/staff']);
+      }
     }
   }
 

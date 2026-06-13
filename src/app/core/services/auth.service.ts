@@ -6,10 +6,12 @@ import {
   signOut,
   sendPasswordResetEmail,
 } from '@angular/fire/auth';
+import { TenantSessionService } from './tenant-session.service';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private auth = inject(Auth);
+  private auth          = inject(Auth);
+  private tenantSession = inject(TenantSessionService);
 
   /** Usuario de Firebase actualmente autenticado (null = sin sesión). */
   readonly currentUser = signal<User | null>(null);
@@ -26,7 +28,8 @@ export class AuthService {
     return signInWithEmailAndPassword(this.auth, email, password);
   }
 
-  signOut() {
+  async signOut() {
+    this.tenantSession.clear();
     return signOut(this.auth);
   }
 

@@ -12,8 +12,29 @@
       <span class="brand-name">MotoStore</span>
     </div>
 
+    <!-- ── Modo selector de tenant ──────────────────────────── -->
+    @if (tenantPickerMode()) {
+
+      <h1 class="login-heading">Selecciona tu tienda</h1>
+      <p class="login-sub">Tu cuenta tiene acceso a múltiples tiendas.</p>
+
+      <div class="tenant-list">
+        @for (tenant of availableTenants(); track tenant.tenantId) {
+          <button class="tenant-item" type="button" (click)="selectTenant(tenant)">
+            <span class="tenant-item-name">{{ tenant.tenantName }}</span>
+            <span class="tenant-item-role">{{ tenant.role }}</span>
+            <svg class="tenant-item-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+          </button>
+        }
+      </div>
+
+    }
+
     <!-- ── Modo login ─────────────────────────────────────────── -->
-    @if (!forgotMode()) {
+    @if (!forgotMode() && !tenantPickerMode()) {
 
       <h1 class="login-heading">Inicia sesión</h1>
       <p class="login-sub">Accede al panel de administración</p>
@@ -113,7 +134,7 @@
     }
 
     <!-- ── Modo recuperar contraseña ──────────────────────────── -->
-    @if (forgotMode()) {
+    @if (forgotMode() && !tenantPickerMode()) {
 
       <h1 class="login-heading">Recuperar contraseña</h1>
       <p class="login-sub">Te enviaremos un enlace para establecer tu contraseña.</p>

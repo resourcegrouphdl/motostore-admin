@@ -31,14 +31,14 @@ jobs:
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_HDLIZANA }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MVMOTORS }}
           channelId: live
-          projectId: hdlizana
+          projectId: mvmotors-alcontado-front
 
       - name: Deploy preview (PR)
         if: github.event_name == 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_HDLIZANA }}
-          projectId: hdlizana
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_MVMOTORS }}
+          projectId: mvmotors-alcontado-front

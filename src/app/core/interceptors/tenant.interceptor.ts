@@ -1,28 +1,28 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { inject } from '@angular/core';
 import { environment } from '../../../environments/environment';
+import { TenantSessionService } from '../services/tenant-session.service';
 
 /**
  * Agrega el header X-Tenant-Slug a todas las requests al backend.
- * - Local dev: usa environment.tenantSlug ('demo-store')
- * - Producción: deriva el slug del primer segmento del hostname (subdominio)
+ *
+ * Orden de resolución:
+ *   1. TenantSessionService.slug() — slug elegido tras el login (persiste en localStorage)
+ *   2. environment.tenantSlug — fallback para dev local
+ *
+ * En producción el slug siempre viene de TenantSessionService (cargado
+ * desde /api/v1/me/tenants en el login). La dependencia de environment
+ * se mantiene solo para facilitar el desarrollo local.
  */
 export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith(environment.apiUrl)) {
     return next(req);
   }
 
-  // env.tenantSlug (hardcoded per-tenant build) beats subdomain extraction.
-  // On Firebase Hosting the subdomain is the site ID (e.g. "motostore-admin"),
-  // not the tenant slug — so env var must win when set.
-  const slug = environment.tenantSlug
-    || (environment.production ? extractSubdomain(window.location.hostname) : '');
+  const tenantSession = inject(TenantSessionService);
+  const slug = tenantSession.slug() ?? environment.tenantSlug ?? '';
 
   if (!slug) return next(req);
 
   return next(req.clone({ setHeaders: { 'X-Tenant-Slug': slug } }));
 };
-
-function extractSubdomain(hostname: string): string {
-  const parts = hostname.split('.');
-  return parts.length > 2 ? parts[0] : '';
-}

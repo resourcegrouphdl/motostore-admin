@@ -5,7 +5,7 @@
 export const environment = {
   production: true,
   apiUrl: 'https://motostore-api-749765863620.southamerica-east1.run.app',
-  tenantSlug: 'moto-ya-digital',
+  tenantSlug: '',  // Resuelto dinámicamente desde /api/v1/me/tenants en el login
   useEmulators: false,
   emulators: {
     authPort: 9099,
