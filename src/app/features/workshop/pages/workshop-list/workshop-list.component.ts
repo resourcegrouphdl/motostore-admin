@@ -1,15 +1,19 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal, ElementRef, ViewChild } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Storage, ref, uploadBytesResumable, getDownloadURL } from '@angular/fire/storage';
 import { WorkshopService } from '../../services/workshop.service';
 import {
   WorkOrder, WorkOrderStatus, WorkOrderTipo,
+  WorkOrderPhoto, PhotoStage,
   AddItemPayload, CreateWorkOrderPayload,
   STATUS_LABEL, TIPO_LABEL, NEXT_STATES, FILTER_STATUSES,
   ACTIVE_STATUSES, WORKFLOW_STEPS, TIPO_OPTIONS,
+  STAGE_LABEL, PHOTO_STAGES,
 } from '../../models/workshop.model';
+import { environment } from '../../../../../environments/environment';
 
-type DetailTab = 'resumen' | 'diagnostico' | 'entrega';
+type DetailTab = 'resumen' | 'diagnostico' | 'entrega' | 'fotos';
 type PanelMode = 'none' | 'create' | 'detail';
 
 @Component({
@@ -20,7 +24,8 @@ type PanelMode = 'none' | 'create' | 'detail';
   styleUrl:    './workshop-list.component.scss',
 })
 export class WorkshopListComponent implements OnInit {
-  private svc = inject(WorkshopService);
+  private svc     = inject(WorkshopService);
+  private storage = inject(Storage);
 
   // ── List state ──────────────────────────────────────────────────
   loading      = signal(true);
@@ -55,6 +60,24 @@ export class WorkshopListComponent implements OnInit {
 
   // ── Approval ────────────────────────────────────────────────────
   approvalLoading = signal(false);
+
+  // ── Photos ───────────────────────────────────────────────────────
+  photos        = signal<WorkOrderPhoto[]>([]);
+  photosLoading = signal(false);
+  uploadingStage = signal<PhotoStage | null>(null);
+  uploadProgress = signal<number>(0);
+
+  photosByStage = computed(() => {
+    const all = this.photos();
+    return {
+      RECEPCION: all.filter(p => p.stage === 'RECEPCION'),
+      TRABAJO:   all.filter(p => p.stage === 'TRABAJO'),
+      ENTREGA:   all.filter(p => p.stage === 'ENTREGA'),
+    } as Record<PhotoStage, WorkOrderPhoto[]>;
+  });
+
+  readonly STAGE_LABEL  = STAGE_LABEL;
+  readonly PHOTO_STAGES = PHOTO_STAGES;
 
   // ── PDF ──────────────────────────────────────────────────────────
   pdfLoading   = signal(false);
@@ -112,6 +135,7 @@ export class WorkshopListComponent implements OnInit {
   readonly FILTER_STATUSES = FILTER_STATUSES;
   readonly TIPO_OPTIONS    = TIPO_OPTIONS;
   readonly WORKFLOW_STEPS  = WORKFLOW_STEPS;
+  readonly trackingUrl     = `${window.location.origin.replace('4201', '4200')}/taller`;
 
   // ── Lifecycle ────────────────────────────────────────────────────
   ngOnInit() { this.load(); }
@@ -137,8 +161,80 @@ export class WorkshopListComponent implements OnInit {
         this.closeOpen.set(false);
         this.lastNotifSent.set(null);
         this.resetCloseForm();
+        this.loadPhotos(full.id);
       },
     });
+  }
+
+  private loadPhotos(orderId: string) {
+    this.photosLoading.set(true);
+    this.svc.getPhotos(orderId).subscribe({
+      next:  ps => { this.photos.set(ps); this.photosLoading.set(false); },
+      error: _  => this.photosLoading.set(false),
+    });
+  }
+
+  triggerFileInput(stage: PhotoStage, input: HTMLInputElement) {
+    input.dataset['stage'] = stage;
+    input.click();
+  }
+
+  async onFilesSelected(event: Event, orderId: string) {
+    const input = event.target as HTMLInputElement;
+    const stage = (input.dataset['stage'] ?? 'RECEPCION') as PhotoStage;
+    const files  = Array.from(input.files ?? []);
+    if (!files.length) return;
+
+    this.uploadingStage.set(stage);
+    this.uploadProgress.set(0);
+
+    try {
+      for (const file of files) {
+        const url = await this.uploadToStorage(file, orderId, stage);
+        await new Promise<void>((resolve, reject) => {
+          this.svc.addPhoto(orderId, { url, stage }).subscribe({
+            next: photo => { this.photos.update(ps => [...ps, photo]); resolve(); },
+            error: reject,
+          });
+        });
+      }
+      this.showToast(`${files.length} foto(s) subida(s)`, 'ok');
+    } catch {
+      this.showToast('Error al subir foto. Intenta de nuevo.', 'err');
+    } finally {
+      this.uploadingStage.set(null);
+      input.value = '';
+    }
+  }
+
+  private uploadToStorage(file: File, orderId: string, stage: string): Promise<string> {
+    const slug = environment.tenantSlug || 'demo';
+    const ext  = file.name.split('.').pop() ?? 'jpg';
+    const path = `${slug}/workshop/${orderId}/${stage}/${Date.now()}.${ext}`;
+    const storageRef = ref(this.storage, path);
+
+    return new Promise((resolve, reject) => {
+      const task = uploadBytesResumable(storageRef, file);
+      task.on('state_changed',
+        snap => this.uploadProgress.set(Math.round(snap.bytesTransferred / snap.totalBytes * 100)),
+        err  => reject(err),
+        ()   => getDownloadURL(task.snapshot.ref).then(resolve).catch(reject)
+      );
+    });
+  }
+
+  deletePhoto(photo: WorkOrderPhoto) {
+    const sel = this.selected();
+    if (!sel) return;
+    this.svc.deletePhoto(sel.id, photo.id).subscribe({
+      next: () => this.photos.update(ps => ps.filter(p => p.id !== photo.id)),
+      error: () => this.showToast('No se pudo eliminar la foto.', 'err'),
+    });
+  }
+
+  copyTrackingLink(order: WorkOrder) {
+    const url = `${this.trackingUrl}/${order.numeroOt}`;
+    navigator.clipboard.writeText(url).then(() => this.showToast('Enlace de seguimiento copiado', 'ok'));
   }
 
   closePanel() {

@@ -3,7 +3,8 @@ import {
   Auth, User,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  signOut
+  signOut,
+  sendPasswordResetEmail,
 } from '@angular/fire/auth';
 
 @Injectable({ providedIn: 'root' })
@@ -27,5 +28,9 @@ export class AuthService {
 
   signOut() {
     return signOut(this.auth);
+  }
+
+  sendPasswordReset(email: string) {
+    return sendPasswordResetEmail(this.auth, email);
   }
 }

@@ -296,6 +296,12 @@
         <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'resumen'"      (click)="setTab('resumen')">Resumen</button>
         <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'diagnostico'"  (click)="setTab('diagnostico')">Diagnóstico y presupuesto</button>
         <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'entrega'"      (click)="setTab('entrega')">Entrega</button>
+        <button class="tab-btn" [class.tab-btn--active]="activeTab() === 'fotos'"        (click)="setTab('fotos')">
+          Fotos
+          @if (photos().length > 0) {
+            <span class="tab-badge">{{ photos().length }}</span>
+          }
+        </button>
       </nav>
 
       <div class="panel-body">
@@ -632,6 +638,95 @@
                 <p class="entrega-pending-sub">Estado actual: {{ STATUS_LABEL[o.status] }}</p>
               </div>
             }
+
+          </div>
+        }
+
+        <!-- ── TAB: FOTOS ──────────────────────────────── -->
+        @if (activeTab() === 'fotos') {
+          <div class="tab-content">
+
+            <!-- Hidden file input — shared, stage set via data attr -->
+            <input
+              #photoInput
+              type="file"
+              accept="image/*"
+              multiple
+              class="visually-hidden"
+              (change)="onFilesSelected($event, o.id)"
+              aria-hidden="true"
+            />
+
+            <!-- Upload progress bar -->
+            @if (uploadingStage()) {
+              <div class="upload-progress-wrap" role="status" aria-label="Subiendo fotos">
+                <div class="upload-progress-bar" [style.width.%]="uploadProgress()"></div>
+                <span class="upload-progress-label">
+                  Subiendo {{ STAGE_LABEL[uploadingStage()!] }}… {{ uploadProgress() }}%
+                </span>
+              </div>
+            }
+
+            @for (stage of PHOTO_STAGES; track stage) {
+              <div class="photo-stage">
+                <div class="photo-stage-header">
+                  <p class="group-title" style="margin:0">{{ STAGE_LABEL[stage] }}</p>
+                  @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                    <button
+                      class="btn-upload-photos"
+                      type="button"
+                      (click)="triggerFileInput(stage, photoInput)"
+                      [disabled]="!!uploadingStage()"
+                      [attr.aria-label]="'Subir fotos de ' + STAGE_LABEL[stage]"
+                    >
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                      Subir
+                    </button>
+                  }
+                </div>
+
+                @if (photosLoading()) {
+                  <div class="photos-loading" aria-label="Cargando fotos">
+                    <span class="skel skel--badge" style="width:80px;height:80px;border-radius:8px"></span>
+                    <span class="skel skel--badge" style="width:80px;height:80px;border-radius:8px"></span>
+                  </div>
+                } @else if (photosByStage()[stage].length === 0) {
+                  <p class="photos-empty">Sin fotos en esta etapa.</p>
+                } @else {
+                  <div class="photos-grid" role="list">
+                    @for (photo of photosByStage()[stage]; track photo.id) {
+                      <div class="photo-thumb" role="listitem">
+                        <a [href]="photo.url" target="_blank" rel="noopener"
+                           [attr.aria-label]="'Ver foto de ' + STAGE_LABEL[photo.stage]">
+                          <img [src]="photo.url" [alt]="STAGE_LABEL[photo.stage]"
+                               loading="lazy" decoding="async" />
+                        </a>
+                        @if (o.status !== 'ENTREGADA' && o.status !== 'CANCELADA') {
+                          <button
+                            class="photo-delete"
+                            type="button"
+                            (click)="deletePhoto(photo)"
+                            aria-label="Eliminar foto"
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+            }
+
+            <!-- Tracking link -->
+            <div class="tracking-link-section">
+              <p class="group-title">Enlace de seguimiento para el cliente</p>
+              <p class="tracking-hint">Comparte este enlace para que el cliente vea el estado y las fotos sin necesidad de llamar.</p>
+              <button class="btn-copy-link" type="button" (click)="copyTrackingLink(o)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Copiar enlace de seguimiento
+              </button>
+            </div>
 
           </div>
         }

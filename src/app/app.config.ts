@@ -5,6 +5,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getAuth, provideAuth, connectAuthEmulator } from '@angular/fire/auth';
 import { getFirestore, provideFirestore, connectFirestoreEmulator } from '@angular/fire/firestore';
+import { getStorage, provideStorage, connectStorageEmulator } from '@angular/fire/storage';
 
 import { routes } from './app.routes';
 import { environment } from '../environments/environment';
@@ -38,6 +39,15 @@ export const appConfig: ApplicationConfig = {
         connectFirestoreEmulator(firestore, 'localhost', environment.emulators!.firestorePort);
       }
       return firestore;
+    }),
+
+    // Firebase Storage — upload directo de fotos desde el admin
+    provideStorage(() => {
+      const storage = getStorage();
+      if (environment.useEmulators) {
+        connectStorageEmulator(storage, 'localhost', environment.emulators!.storagePort);
+      }
+      return storage;
     }),
   ]
 };

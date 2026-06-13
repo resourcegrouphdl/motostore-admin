@@ -1,3 +1,27 @@
+export type PhotoStage = 'RECEPCION' | 'TRABAJO' | 'ENTREGA';
+
+export interface WorkOrderPhoto {
+  id:         string;
+  stage:      PhotoStage;
+  url:        string;
+  caption:    string | null;
+  createdAt:  string;
+}
+
+export interface AddPhotoRequest {
+  url:      string;
+  stage:    PhotoStage;
+  caption?: string;
+}
+
+export const STAGE_LABEL: Record<PhotoStage, string> = {
+  RECEPCION: 'Recepción',
+  TRABAJO:   'En trabajo',
+  ENTREGA:   'Entrega',
+};
+
+export const PHOTO_STAGES: PhotoStage[] = ['RECEPCION', 'TRABAJO', 'ENTREGA'];
+
 export type WorkOrderStatus =
   | 'AGENDADA' | 'RECIBIDA' | 'EN_DIAGNOSTICO' | 'PRESUPUESTADA'
   | 'APROBADA'  | 'EN_TRABAJO' | 'LISTA' | 'ENTREGADA' | 'CANCELADA';

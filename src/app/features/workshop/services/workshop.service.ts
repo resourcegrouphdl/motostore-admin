@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { tap, map } from 'rxjs/operators';
 import {
-  WorkOrder, WorkOrderItem,
+  WorkOrder, WorkOrderItem, WorkOrderPhoto, AddPhotoRequest,
   CreateWorkOrderPayload, AddItemPayload,
 } from '../models/workshop.model';
 
@@ -53,6 +53,18 @@ export class WorkshopService {
     mecanicoUid?:        string;
   }): Observable<WorkOrder> {
     return this.http.patch<WorkOrder>(`${BASE}/orders/${id}/close`, payload);
+  }
+
+  getPhotos(orderId: string): Observable<WorkOrderPhoto[]> {
+    return this.http.get<WorkOrderPhoto[]>(`${BASE}/orders/${orderId}/photos`);
+  }
+
+  addPhoto(orderId: string, req: AddPhotoRequest): Observable<WorkOrderPhoto> {
+    return this.http.post<WorkOrderPhoto>(`${BASE}/orders/${orderId}/photos`, req);
+  }
+
+  deletePhoto(orderId: string, photoId: string): Observable<void> {
+    return this.http.delete<void>(`${BASE}/orders/${orderId}/photos/${photoId}`);
   }
 
   downloadPdf(id: string, filename: string): Observable<void> {

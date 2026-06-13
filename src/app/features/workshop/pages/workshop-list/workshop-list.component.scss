@@ -573,6 +573,114 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Tab badge ─────────────────────────────────────────── */
+.tab-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #fff;
+  font-size: 10px; font-weight: 700; font-family: var(--font-mono);
+  min-width: 16px; height: 16px; border-radius: 99px; padding: 0 4px;
+  margin-left: 4px;
+}
+
+/* ── Visually hidden (accessible file input) ───────────── */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* ── Photo stages ──────────────────────────────────────── */
+.photo-stage {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px; margin-bottom: 16px;
+  &:last-of-type { border-bottom: none; margin-bottom: 0; }
+}
+
+.photo-stage-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.btn-upload-photos {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); font: inherit; font-size: 12px; font-weight: 500;
+  color: var(--ink-2); cursor: pointer; transition: border-color 120ms, color 120ms;
+  &:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.photos-loading {
+  display: flex; gap: 8px;
+}
+
+.photos-empty {
+  font-size: 12.5px; color: var(--ink-3); margin: 0;
+}
+
+.photos-grid {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+
+.photo-thumb {
+  position: relative; width: 88px; height: 88px; border-radius: 8px;
+  overflow: hidden; border: 1px solid var(--border);
+  background: var(--bg-2);
+  transition: border-color 120ms;
+  &:hover { border-color: var(--accent); }
+
+  img {
+    width: 100%; height: 100%; object-fit: cover;
+    display: block;
+  }
+
+  a { display: block; width: 100%; height: 100%; }
+}
+
+.photo-delete {
+  position: absolute; top: 4px; right: 4px;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: #fff; border: none;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; opacity: 0; transition: opacity 120ms;
+
+  .photo-thumb:hover & { opacity: 1; }
+}
+
+/* ── Upload progress ───────────────────────────────────── */
+.upload-progress-wrap {
+  position: relative; height: 28px; margin-bottom: 12px;
+  background: var(--bg-2); border-radius: var(--r-sm); overflow: hidden;
+}
+
+.upload-progress-bar {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  background: var(--accent); transition: width 100ms linear; border-radius: inherit;
+}
+
+.upload-progress-label {
+  position: relative; z-index: 1; font-size: 11.5px; font-weight: 500;
+  color: var(--ink-2); line-height: 28px; padding-left: 10px;
+}
+
+/* ── Tracking link section ─────────────────────────────── */
+.tracking-link-section {
+  margin-top: 16px; padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.tracking-hint {
+  font-size: 12.5px; color: var(--ink-3); margin: 0 0 10px;
+}
+
+.btn-copy-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  background: var(--surface); font: inherit; font-size: 12.5px; font-weight: 500;
+  color: var(--ink-2); cursor: pointer; transition: border-color 120ms, color 120ms;
+  &:hover { border-color: var(--accent); color: var(--accent); }
+}
+
 /* ── Reduced motion ─────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   .ot-row        { animation: none; }

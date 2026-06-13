@@ -82,6 +82,12 @@
                 <button mat-menu-item (click)="openEdit(row)">
                   <mat-icon>edit</mat-icon> Editar
                 </button>
+                <button mat-menu-item (click)="sendInvitation(row)"
+                        [matTooltip]="row.lastLoginAt ? 'Reenviar acceso por email' : 'El staff aún no ha ingresado'"
+                        matTooltipPosition="left">
+                  <mat-icon>mail_outline</mat-icon>
+                  {{ row.lastLoginAt ? 'Reenviar acceso' : 'Enviar invitación' }}
+                </button>
                 @if (!isSelf(row)) {
                   <button mat-menu-item (click)="deactivate(row)" class="text-red-600">
                     <mat-icon color="warn">person_off</mat-icon> Desactivar

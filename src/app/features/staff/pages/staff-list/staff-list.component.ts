@@ -14,6 +14,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { StaffService } from '../../services/staff.service';
 import { StaffMember, ROLE_LABELS } from '../../models/staff.model';
 import { StaffFormDialogComponent } from '../../components/staff-form-dialog/staff-form-dialog.component';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
   selector: 'app-staff-list',
@@ -28,6 +29,7 @@ import { StaffFormDialogComponent } from '../../components/staff-form-dialog/sta
 })
 export class StaffListComponent implements OnInit {
   private staffService = inject(StaffService);
+  private authService  = inject(AuthService);
   private dialog       = inject(MatDialog);
   private snackBar     = inject(MatSnackBar);
 
@@ -97,6 +99,16 @@ export class StaffListComponent implements OnInit {
         this.snackBar.open(msg, 'Cerrar', { duration: 5000 });
       }
     });
+  }
+
+  sendInvitation(staff: StaffMember) {
+    this.authService.sendPasswordReset(staff.email)
+      .then(() => {
+        this.snackBar.open(`Correo de acceso enviado a ${staff.email}`, 'OK', { duration: 4000 });
+      })
+      .catch(() => {
+        this.snackBar.open('No se pudo enviar el correo. Intenta de nuevo.', 'Cerrar', { duration: 4000 });
+      });
   }
 
   isSelf(staff: StaffMember) {
